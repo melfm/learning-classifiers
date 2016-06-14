@@ -1,2 +1,2 @@
-# Convolutional-Neural-Networks-Mini-project
+# Learning-Classifiers
 Code samples for classifiers
