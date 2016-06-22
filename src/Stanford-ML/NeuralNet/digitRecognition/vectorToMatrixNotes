@@ -1,0 +1,36 @@
+Unrolling parameters :
+say we have the cost function
+
+function [jVal, gradient] = costFunction (theta)
+
+optTheta = fminfunc(@costFunction, initialTheta, options)
+
+passing this to an advanced optimization algorithm
+routines assume initalTheta are parameter vectors
+also assumes it returns vector
+
+now that we are using neural networks, now we have matrices
+
+theta1, theta2, theta3
+
+gradient terms D1, D2, D3 again matrices
+
+how to take these matrices and unroll them into vectors to calculate gradient?
+
+to convet between matrices and vectrs :
+
+thetaVec = [ Theta1(:) ; Theta2(:); Theta3(:)]
+DVec = big long vector 
+
+to go back from vector rep to matrix
+Theta1 = reshape(thetaVec(1:110), 10, 11);
+
+Theta2 = reshape(thetaVec(110:220), 10, 11);
+
+Theta3 = reshape(thetaVec(220:231), 1, 11);
+
+1) unroll into long vector to pass as initial setting
+2) implement cost function
+    reshape function to pull elements
+    to get original parameters matrices
+    
