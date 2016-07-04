@@ -1,2 +1,2 @@
 # Learning-Classifiers
-Code samples for classifiers
+Playground for classifiers
