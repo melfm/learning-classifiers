@@ -56,14 +56,6 @@ def run_gradient_descent(X, y, alpha, num_iterations):
     return theta, J_costs
 
 
-def do_prediction(theta):
-    # Perform a couple of predictions
-    predict_1 = np.array([1, 2.5]).dot(theta).flatten()
-    print 'prdicted profit of %f' % (predict_1 * 10000)
-    predict_2 = np.array([1, 7.0]).dot(theta).flatten()
-    print 'predcted %f' % (predict_2 * 10000)
-
-
 def plot_results(data, x_input, theta):
     result = x_input.dot(theta).flatten()
     plt.figure(1)
@@ -94,7 +86,7 @@ def plot_results(data, x_input, theta):
     plt.show()
 
 if __name__ == "__main__":
-    data = processData.LoadData(False)
+    data = processData.LinearRegData(False)
     X = data[:, 0]
     y = data[:, 1]
 
@@ -106,5 +98,4 @@ if __name__ == "__main__":
     alpha = 0.01
     num_iterations = 1500
     theta, J_costs = run_gradient_descent(x_input, y, alpha, num_iterations)
-    do_prediction(theta)
     plot_results(data, x_input, theta)
