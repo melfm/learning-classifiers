@@ -18,9 +18,9 @@ J = J + Reg_term;
 
 for i = 1 : m
     % Do not penalize theta_0
-    grad(1) = grad(1) + (theta' * X(i,:)' - y(i) ) * X(i,1);
+    grad(1) = grad(1) + (X(i,:) * theta - y(i) ) * X(i,1);
     for j = 2 : size(theta)
-        grad(j) = grad(j) + (theta' * X(i,:)' - y(i)) * X(i,j) + ...
+        grad(j) = grad(j) + (X(i,:) * theta - y(i)) * X(i,j) + ...
             ((lambda/m) * theta(j));
     end
 end
