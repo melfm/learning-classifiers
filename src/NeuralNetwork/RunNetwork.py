@@ -6,5 +6,6 @@ if __name__ == '__main__':
     neuron = Neuron(input, [], 3)
 
     neuron.initializeNeuron(input, 3)
-    print neuron.weights
+    weights = neuron.getWeights()
+    print weights
 
