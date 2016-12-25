@@ -1,2 +1,2 @@
-# Learning-Classifiers
-Playground for classifiers
+# Playground for ML algorithms
+
