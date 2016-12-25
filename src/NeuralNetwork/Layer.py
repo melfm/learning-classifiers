@@ -36,14 +36,25 @@ class Layer(object):
     def setInput(self, inInput):
         self.input = inInput
         for i in range(0, self.inNumNeurons -1):
-            print self.inNumNeurons
+            print(self.inNumNeurons)
             self.neurons[i].setInput(self.input)
 
-    def feedForward():
-        pass
+    def feedForward(self):
+        for i in range(0, self.inNumNeurons):
+            self.outputs[i] = self.neurons[i].fire()
 
-    def backPropagate():
-        pass
+        if(not self.isOutput):
+            self.nextLayer.feedForward()
+
+    def backPropagate(self):
+        for i in range(0, self.inNumNeurons):
+            deltaSum = 0
+            for j in range(0, self.nextLayer.getNumNeurons()):
+                layer_neuron = self.nextLayer.getNeuron[j]
+                err = layer_neuron.getError()
+                layer_weight = layer_neuron.getWeights()
+                deltaSum += err * layer_weight
+            self.neurons[i].setError(Neuron.sigmoid(self.neurons[i].getOutput()) * deltaSum)
 
     def updateWeights():
         pass

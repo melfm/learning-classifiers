@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 import math
 import numpy as np
-
+import pdb
 
 class Neuron(object):
 
@@ -13,7 +13,7 @@ class Neuron(object):
 
     def initializeNeuronWeights(self):
         r = math.sqrt(6) / math.sqrt(10 + 10 + 1)
-        for i in range(0, self.numInputs):
+        for i in range(0, self.numInputs + 1):
             self.weights.append(np.random.random() * 2 * r - r)
             self.prevWeightDelta.append(0.0)
 
@@ -31,3 +31,18 @@ class Neuron(object):
 
     def getWeights(self):
         return self.weights
+
+    def fire(self):
+        output = self.sigmoid(self.getWeightedSum())
+        return output
+
+    def sigmoid(self, value):
+        return 1/(1 + math.exp(value))
+
+    def getWeightedSum(self):
+        total_sum = 0.0
+        for i in range(0, self.numInputs):
+            total_sum += self.weights[i] * self.input[i]
+
+        total_sum += self.weights[self.numInputs]
+        return total_sum
