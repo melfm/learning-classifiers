@@ -3,6 +3,8 @@ from Neuron import Neuron
 from Layer import Layer
 import unittest
 
+import pdb
+
 class NeuronTest(unittest.TestCase):
 
     @classmethod
@@ -54,9 +56,42 @@ class LayerTest(unittest.TestCase):
         weights = layer_0.neurons[0].getWeights()
         print(weights)
 
+    def testConnectLayer(self):
+        pass
+
 class BackpropTest(unittest.TestCase):
 
     def testInitialization(self):
+        pass
+
+    def testFeedForward(self):
+        layer_0 = Layer(1)
+        layer_0.initializeLayer(True,False)
+        input = [5,6,7]
+        layer_0.setInput(input)
+        layer_0.connectInput(input, 3)
+
+        layer_0.feedForward();
+        print("Output of Layer", layer_0.output)
+
+    def testFeedForwardMultiLayer(self):
+        layer_0 = Layer(1)
+        layer_1 = Layer(1)
+        layer_1.initializeLayer(True, False, inPrevLayer=layer_0)
+
+        layer_0.initializeLayer(False,False, inNextLayer=layer_1)
+        input = [5,6,7]
+        layer_0.setInput(input)
+        pdb.set_trace()
+        layer_1.setInput(layer_0)
+        layer_1.connectInput(layer_0, 1)
+        layer_0.connectInput(input, 3)
+        layer_0.feedForward();
+        pdb.set_trace()
+        print("Output of Layer", layer_0.output)
+
+
+    def testBackprop(self):
         pass
 
 if __name__ == '__main__':

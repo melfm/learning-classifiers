@@ -1,5 +1,6 @@
 #! /usr/bin/env/ python2
 from Neuron import Neuron
+import pdb
 
 LEARNING_RATE = 0.2
 ALPHA = 0.2
@@ -11,12 +12,12 @@ class Layer(object):
         self.inNumNeurons = inNumNeurons
 
     def initializeLayer(self,
-                        isInOutput,
-                        isInInput,
+                        isOutput,
+                        isInput,
                         inNextLayer=None,
                         inPrevLayer=None):
-        self.isInOutput = isInOutput
-        self.isInInput = isInInput
+        self.isOutput = isOutput
+        self.isInput = isInput
         self.nextLayer = inNextLayer
         self.prevLayer = inPrevLayer
         self.input = []
@@ -25,6 +26,7 @@ class Layer(object):
         self.numInputs = 0
 
     def connectInput(self, inInput, inNumInputs):
+        pdb.set_trace()
         self.numInputs = inNumInputs
         self.neurons = [Neuron(self.input, self.numInputs)
                         for i in range(self.inNumNeurons)]
@@ -41,9 +43,12 @@ class Layer(object):
 
     def feedForward(self):
         for i in range(0, self.inNumNeurons):
-            self.outputs[i] = self.neurons[i].fire()
+            pdb.set_trace()
+            self.output.append(self.neurons[i].fire())
+            print("output of neuron after firing", self.output[i])
 
         if(not self.isOutput):
+
             self.nextLayer.feedForward()
 
     def backPropagate(self):
