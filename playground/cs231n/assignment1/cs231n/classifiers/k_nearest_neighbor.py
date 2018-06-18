@@ -148,18 +148,14 @@ class KNearestNeighbor(object):
             # Hint: Look up the function numpy.argsort.
             ####################################################################
             sorted_distances = np.argsort(dists[i])
-            # Select top k
-            top_k_indices = sorted_distances[0:k]
-            # Find the labels of these neighbors
-            for indx in top_k_indices:
-                closest_y.append(self.y_train[indx])
-
+            # Select top k labels
+            closest_y = self.y_train[sorted_distances[:k]]
             ####################################################################
             # Now that you have found the labels of the k nearest neighbors, you
             # need to find the most common label in the list closest_y of
             # labels. Store this label in y_pred[i]. Break ties by choosing
             # the smaller label.
             ####################################################################
-            y_pred[i] = max(set(closest_y), key=closest_y.count)
+            y_pred[i] = np.bincount(closest_y).argmax()
 
         return y_pred

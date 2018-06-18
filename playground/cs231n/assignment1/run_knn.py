@@ -16,6 +16,7 @@ X_train, y_train, X_test, y_test = load_CIFAR10(cifar10_dir)
 visualize_images = True
 compare_loop_vs_vect = True
 run_speed_test = True
+run_cross_validation = True
 
 # As a sanity check, we print out the size of the training and test data.
 print('Training data shape: ', X_train.shape)
@@ -74,7 +75,7 @@ print('Got %d / %d correct => accuracy: %f' % (num_correct, num_test, accuracy))
 #############################################################################
 # For comparison purposes
 # Set k=5
-clf = neighbors.KNeighborsClassifier(5)
+clf = neighbors.KNeighborsClassifier(10)
 clf.fit(X_train, y_train)
 pred = clf.predict(X_test)
 
@@ -149,58 +150,87 @@ if run_speed_test:
 
 #############################################################################
 # Cross-validation
-num_folds = 5
-k_choices = [1, 3, 5, 8, 10, 12, 15, 20, 50, 100]
+if run_cross_validation:
+    num_folds = 5
+    k_choices = [1, 3, 5, 8, 10, 12, 15, 20, 50, 100]
 
-X_train_folds = []
-y_train_folds = []
-################################################################################
-# Split up the training data into folds. After splitting, X_train_folds and    #
-# y_train_folds should each be lists of length num_folds, where                #
-# y_train_folds[i] is the label vector for the points in X_train_folds[i].     #
-# Hint: Look up the numpy array_split function.                                #
-################################################################################
-X_train_folds = np.array_split(X_train, num_folds)
-y_train_folds = np.array_split(y_train, num_folds)
+    X_train_folds = []
+    y_train_folds = []
+    # Split up the training data into folds.
+    X_train_folds = np.array_split(X_train, num_folds)
+    y_train_folds = np.array_split(y_train, num_folds)
 
-# A dictionary holding the accuracies for different values of k that we find
-# when running cross-validation. After running cross-validation,
-# k_to_accuracies[k] should be a list of length num_folds giving the different
-# accuracy values that we found when using that value of k.
-k_to_accuracies = {}
+    # A dictionary holding the accuracies for different values of k that we find
+    # when running cross-validation. After running cross-validation,
+    # k_to_accuracies[k] should be a list of length num_folds giving the
+    # different accuracy values that we found when using that value of k.
+    k_to_accuracies = {}
 
-################################################################################
-# Perform k-fold cross validation to find the best value of k. For each        #
-# possible value of k, run the k-nearest-neighbor algorithm num_folds times,   #
-# where in each case you use all but one of the folds as training data and the #
-# last fold as a validation set. Store the accuracies for all fold and all     #
-# values of k in the k_to_accuracies dictionary.                               #
-################################################################################
-num_test = int(num_training / 5)
+    ############################################################################
+    # Perform k-fold cross validation to find the best value of k. For each
+    # possible value of k, run the k-nearest-neighbor algorithm num_folds times,
+    # where in each case you use all but one of the folds as training data and
+    # the last fold as a validation set. Store the accuracies for all fold and
+    # all values of k in the k_to_accuracies dictionary.
+    ############################################################################
+    num_test = int(num_training / 5)
+    classifier = KNearestNeighbor()
+    for k in k_choices:
+        for folds in range(num_folds):
+            classifier = KNearestNeighbor()
+            X_train_fold = X_train_folds[0:folds] + X_train_folds[folds+1:]
+            X_train_fold = np.asarray(X_train_fold).reshape(-1, 3072)
+            y_train_fold = y_train_folds[0:folds] + y_train_folds[folds+1:]
+            y_train_fold = np.asarray(y_train_fold).reshape(-1)
+
+            classifier.train(X_train_fold,
+                             y_train_fold)
+            x_test = np.asarray(X_train_folds[folds])
+            y_test = np.asarray(y_train_folds[folds])
+            dists = classifier.compute_distances_no_loops(x_test)
+            y_test_pred = classifier.predict_labels(dists, k=k)
+
+            # Compute and print the fraction of correctly predicted examples
+            num_correct = np.sum(y_test_pred == y_test)
+            accuracy = float(num_correct) / num_test
+            print('Got %d / %d correct => accuracy: %f' %
+                  (num_correct, num_test, accuracy))
+            k_to_accuracies[k] = k_to_accuracies.get(k, []) + [accuracy]
+
+    # Print out the computed accuracies
+    for k in sorted(k_to_accuracies):
+        for accuracy in k_to_accuracies[k]:
+            print('k = %d, accuracy = %f' % (k, accuracy))
+
+    # plot the raw observations
+    for k in k_choices:
+        accuracies = k_to_accuracies[k]
+        plt.scatter([k] * len(accuracies), accuracies)
+
+    # plot the trend line with error bars that correspond to standard deviation
+    accuracies_mean = \
+        np.array([np.mean(v) for k, v in sorted(k_to_accuracies.items())])
+    accuracies_std = \
+        np.array([np.std(v) for k, v in sorted(k_to_accuracies.items())])
+    plt.errorbar(k_choices, accuracies_mean, yerr=accuracies_std)
+    plt.title('Cross-validation on k')
+    plt.xlabel('k')
+    plt.ylabel('Cross-validation accuracy')
+    plt.show()
+
+
+# Based on the cross-validation results above, choose the best value for k,
+# retrain the classifier using all the training data, and test it on the
+# test data.
+# You should be able to get above 28% accuracy on the test data.
+best_k = 10
+
 classifier = KNearestNeighbor()
-for k in k_choices:
-    for folds in range(num_folds):
-        classifier = KNearestNeighbor()
-        X_train_fold = X_train_folds[0:folds] + X_train_folds[folds+1:]
-        X_train_fold = np.asarray(X_train_fold).reshape(-1, 3072)
-        y_train_fold = y_train_folds[0:folds] + y_train_folds[folds+1:]
-        y_train_fold = np.asarray(y_train_fold).reshape(-1)
+classifier.train(X_train, y_train)
+y_test_pred = classifier.predict(X_test, k=best_k)
 
-        classifier.train(X_train_fold,
-                         y_train_fold)
-        x_test = np.asarray(X_train_folds[folds])
-        y_test = np.asarray(y_train_folds[folds])
-        dists = classifier.compute_distances_no_loops(x_test)
-        y_test_pred = classifier.predict_labels(dists, k=k)
-
-        # Compute and print the fraction of correctly predicted examples
-        num_correct = np.sum(y_test_pred == y_test)
-        accuracy = float(num_correct) / num_test
-        print('Got %d / %d correct => accuracy: %f' %
-              (num_correct, num_test, accuracy))
-        k_to_accuracies[k] = k_to_accuracies.get(k, []) + [accuracy]
-
-# Print out the computed accuracies
-for k in sorted(k_to_accuracies):
-    for accuracy in k_to_accuracies[k]:
-        print('k = %d, accuracy = %f' % (k, accuracy))
+# Compute and display the accuracy
+num_correct = np.sum(y_test_pred == y_test)
+accuracy = float(num_correct) / num_test
+print('With best K Got %d / %d correct => accuracy: %f' % (num_correct,
+                                                           num_test, accuracy))
