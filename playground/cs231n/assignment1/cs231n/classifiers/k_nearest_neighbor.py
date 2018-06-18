@@ -112,7 +112,7 @@ class KNearestNeighbor(object):
         # points without using any explicit loops, and store the result in
         # dists.
         ########################################################################
-        # write (a - b)^2 = a^2 + b^2 - 2ab
+        # (a - b)^2 = a^2 + b^2 - 2ab
         dot_prod = 2 * np.dot(X, self.X_train.T)
         # Sum along the data instance
         X_term = np.expand_dims(np.sum(X**2, axis=1), axis=1)
