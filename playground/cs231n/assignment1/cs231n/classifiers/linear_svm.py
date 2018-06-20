@@ -26,8 +26,8 @@ def svm_loss_naive(W, X, y, reg):
     num_train = X.shape[0]
     loss = 0.0
     for i in range(num_train):
+
         scores = X[i].dot(W)
-        # pdb.set_trace()
         correct_class_score = scores[y[i]]
         for j in range(num_classes):
             if j == y[i]:
@@ -75,6 +75,7 @@ def svm_loss_vectorized(W, X, y, reg):
     scores = X.dot(W)
     # This needs to access the scores per training instance
     # So we use np.arange to index along the instances
+
     correct_class_scores = scores[np.arange(num_train), y]
     margins = np.maximum(
         0, scores - correct_class_scores[:, np.newaxis] + delta)
