@@ -3,8 +3,6 @@ from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 
-import pdb
-
 
 class TwoLayerNet(object):
     """
@@ -73,19 +71,21 @@ class TwoLayerNet(object):
         W2, b2 = self.params['W2'], self.params['b2']
         N, D = X.shape
 
+        # http://cs231n.github.io/neural-networks-case-study/
+
         # Compute the forward pass
         scores = None
-        ########################################################################
+        #######################################################################
         # Perform the forward pass, computing the class scores for the input.
         # Store the result in the scores variable, which should be an array of
         # shape (N, C).
-        ########################################################################
+        #######################################################################
+        # ReLU activation function
+        layer_1 = np.dot(X, W1) + b1
+        hidden_layer = np.maximum(0, layer_1)
+        layer_2 = np.dot(hidden_layer, W2) + b2
 
-        def f(x): return np.maximum(x, 0)
-        h1 = f(np.dot(X, W1) + b1)
-        out = np.dot(h1, W2) + b2
-
-        scores = out
+        scores = layer_2
 
         # If the targets are not given then jump out, we're done
         if y is None:
@@ -99,18 +99,17 @@ class TwoLayerNet(object):
         # result in the variable loss, which should be a scalar. Use the Softmax
         # classifier loss.
         ########################################################################
-        max_scores = np.max(scores, axis=1)
-        scores -= max_scores[:, np.newaxis]
-        scores_exp = np.exp(scores)
-        scores_exp_sum = np.sum(scores_exp, axis=1)
+        exp_scores = np.exp(scores)
+        # Normalize them for each example
+        # The 'keepdims' flag is the same as using np.newaxis method
+        probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
+        correct_logprobs = -np.log(probs[range(N), y])
 
-        correct_class_score = scores[np.arange(N), y]
-        correct_class_score_exp = np.exp(correct_class_score)
+        data_loss = np.sum(correct_logprobs)/N
+        # Note that the 0.5 is a trick that simplifies the gradient expression
+        reg_loss = 0.5 * reg * (np.sum(W1 * W1) + np.sum(W2 * W2))
 
-        loss = -np.sum(np.log(correct_class_score_exp / scores_exp_sum))
-        loss /= N
-        # Add regularization to the loss.
-        loss += reg * (np.sum(W1 * W1) + np.sum(W2 * W2))
+        loss = data_loss + reg_loss
 
         # Backward pass: compute gradients
         grads = {}
@@ -120,37 +119,38 @@ class TwoLayerNet(object):
         # grads['W1'] should store the gradient on W1, and be a matrix of same
         # size.
         ########################################################################
+        # Compute the gradient on scores
+        dscores = probs
+        # Note how we want to subtract one from the true class score
+        # ∂L_i/∂f_k = p_k - 1 (y_i = k)
+        dscores[range(N), y] -= 1
+        dscores /= N
 
-        y_onehot = np.zeros(out.shape)
-        for i, row in enumerate(y_onehot):
-            row[y[i]] = 1
+        # Backpropagate the gradient to the parameters
+        dW2 = np.dot(hidden_layer.T, dscores)
+        # Same as doing np.sum(dscores, axis=0, keepdims=True)
+        db2 = np.ones((N)).dot(dscores)
 
-        out_exp = np.exp(out)
-        scores = (out_exp.T/np.sum(out_exp, axis=1)).T
+        # Backprop into the hidden layer
+        # We had np.dot(hidden_l, W2) + b2
+        dhidden_l = np.dot(dscores, W2.T)
+        # Backpropagate the ReLU non-linearity. Remember ReLU during backward
+        # pass is a switch. r = max(0, x), so dr/dx = 1 (x > 0)
+        # Combined with chain rule, ReLU unit lets the gradient pass through
+        # unchanged if its input was greater than 0, but kills it if its input
+        # was less than zero during forward pass.
+        dhidden_l[hidden_layer <= 0] = 0
+        # Backprop to the first layer
+        dW1 = np.dot(X.T, dhidden_l)
+        db1 = np.ones((N)).dot(dhidden_l)
 
-        dscores = scores - y_onehot
-
-        dW2 = h1.T.dot(dscores)
-        db2 = dscores.T.dot(np.ones(N))
-
-        dX1 = dscores.dot(W2.T)
-        dW1 = (((dX1*(h1 > 0)).T).dot(X)).T
-        db1 = (((dX1*(h1 > 0)).T).dot(np.ones(N))).T
-
-        dW1 /= N
         dW1 += reg * W1
-
-        dW2 /= N
         dW2 += reg * W2
-
-        db1 /= N
-        db2 /= N
 
         grads['W1'] = dW1
         grads['b1'] = db1
         grads['W2'] = dW2
         grads['b2'] = db2
-        # pdb.set_trace()
 
         return loss, grads
 
