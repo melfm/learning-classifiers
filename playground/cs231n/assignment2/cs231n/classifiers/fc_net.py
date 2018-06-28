@@ -38,20 +38,21 @@ class TwoLayerNet(object):
         self.params = {}
         self.reg = reg
 
-        ############################################################################
-        # TODO: Initialize the weights and biases of the two-layer net. Weights    #
-        # should be initialized from a Gaussian centered at 0.0 with               #
-        # standard deviation equal to weight_scale, and biases should be           #
-        # initialized to zero. All weights and biases should be stored in the      #
-        # dictionary self.params, with first layer weights                         #
-        # and biases using the keys 'W1' and 'b1' and second layer                 #
-        # weights and biases using the keys 'W2' and 'b2'.                         #
-        ############################################################################
-        pass
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
-
+        #######################################################################
+        # Initialize the weights and biases of the two-layer net. Weights
+        # should be initialized from a Gaussian centered at 0.0 with
+        # standard deviation equal to weight_scale, and biases should be
+        # initialized to zero. All weights and biases should be stored in the
+        # dictionary self.params, with first layer weights
+        # and biases using the keys 'W1' and 'b1' and second layer
+        # weights and biases using the keys 'W2' and 'b2'.
+        #######################################################################
+        D = input_dim
+        H = hidden_dim
+        self.params['W1'] = weight_scale * np.random.randn(D, H)
+        self.params['b1'] = np.zeros(H)
+        self.params['W2'] = weight_scale * np.random.randn(H, num_classes)
+        self.params['b2'] = np.zeros(num_classes)
 
     def loss(self, X, y=None):
         """
@@ -73,36 +74,78 @@ class TwoLayerNet(object):
           names to gradients of the loss with respect to those parameters.
         """
         scores = None
-        ############################################################################
-        # TODO: Implement the forward pass for the two-layer net, computing the    #
-        # class scores for X and storing them in the scores variable.              #
-        ############################################################################
-        pass
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
+        ########################################################################
+        # Implement the forward pass for the two-layer net, computing the
+        # class scores for X and storing them in the scores variable.
+        ########################################################################
+        W1, b1 = self.params['W1'], self.params['b1']
+        W2, b2 = self.params['W2'], self.params['b2']
+        N = X.shape[0]
+        D = np.prod(X.shape[1:])
+
+        X = X.reshape(-1, D)
+
+        layer_1 = np.dot(X, W1) + b1
+        hidden_layer = np.maximum(0, layer_1)
+        layer_2 = np.dot(hidden_layer, W2) + b2
+
+        scores = layer_2
 
         # If y is None then we are in test mode so just return scores
         if y is None:
             return scores
 
         loss, grads = 0, {}
-        ############################################################################
-        # TODO: Implement the backward pass for the two-layer net. Store the loss  #
-        # in the loss variable and gradients in the grads dictionary. Compute data #
-        # loss using softmax, and make sure that grads[k] holds the gradients for  #
-        # self.params[k]. Don't forget to add L2 regularization!                   #
-        #                                                                          #
-        # NOTE: To ensure that your implementation matches ours and you pass the   #
-        # automated tests, make sure that your L2 regularization includes a factor #
-        # of 0.5 to simplify the expression for the gradient.                      #
-        ############################################################################
-        pass
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
+        ########################################################################
+        # Implement the backward pass for the two-layer net. Store the loss
+        # in the loss variable and gradients in the grads dictionary. Compute
+        # data loss using softmax, and make sure that grads[k] holds the
+        # gradients for self.params[k]. Don't forget to add L2 regularization!
+        #
+        # NOTE: To ensure that your implementation matches ours and you pass the
+        # automated tests, make sure that your L2 regularization includes a
+        # factor of 0.5 to simplify the expression for the gradient.
+        ########################################################################
+        shifted_logits = scores - np.max(scores, axis=1, keepdims=True)
+        Z = np.sum(np.exp(shifted_logits), axis=1, keepdims=True)
+        log_probs = shifted_logits - np.log(Z)
+        probs = np.exp(log_probs)
+        data_loss = -np.sum(log_probs[np.arange(N), y]) / N
+
+        # Note that the 0.5 is a trick that simplifies the gradient expression
+        # Altho it causes the losses to be slightly different
+        reg_loss = 0.5 * self.reg * (np.sum(W1 * W1) + np.sum(W2 * W2))
+
+        loss = data_loss + reg_loss
+
+        # Compute the gradient on scores
+        dscores = probs
+        dscores[range(N), y] -= 1
+        dscores /= N
+
+        dW2 = np.dot(hidden_layer.T, dscores)
+        db2 = np.ones((N)).dot(dscores)
+
+        # Backprop into the hidden layer
+        # We had np.dot(hidden_l, W2) + b2
+        dhidden_l = np.dot(dscores, W2.T)
+        dhidden_l[hidden_layer <= 0] = 0
+        # Backprop to the first layer
+        dW1 = np.dot(X.T, dhidden_l)
+        db1 = np.ones((N)).dot(dhidden_l)
+
+        dW1 += self.reg * W1
+        dW2 += self.reg * W2
+
+        grads['W1'] = dW1
+        grads['b1'] = db1
+        grads['W2'] = dW2
+        grads['b2'] = db2
 
         return loss, grads
+
+
+import pdb
 
 
 class FullyConnectedNet(object):
@@ -152,22 +195,47 @@ class FullyConnectedNet(object):
         self.dtype = dtype
         self.params = {}
 
-        ############################################################################
-        # TODO: Initialize the parameters of the network, storing all values in    #
-        # the self.params dictionary. Store weights and biases for the first layer #
-        # in W1 and b1; for the second layer use W2 and b2, etc. Weights should be #
-        # initialized from a normal distribution centered at 0 with standard       #
-        # deviation equal to weight_scale. Biases should be initialized to zero.   #
-        #                                                                          #
-        # When using batch normalization, store scale and shift parameters for the #
-        # first layer in gamma1 and beta1; for the second layer use gamma2 and     #
-        # beta2, etc. Scale parameters should be initialized to ones and shift     #
-        # parameters should be initialized to zeros.                               #
-        ############################################################################
-        pass
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
+        ########################################################################
+        # Initialize the parameters of the network, storing all values in
+        # the self.params dictionary. Store weights and biases for the first layer
+        # in W1 and b1; for the second layer use W2 and b2, etc. Weights should be
+        # initialized from a normal distribution centered at 0 with standard
+        # deviation equal to weight_scale. Biases should be initialized to zero.
+        #
+        # When using batch normalization, store scale and shift parameters for the
+        # first layer in gamma1 and beta1; for the second layer use gamma2 and
+        # beta2, etc. Scale parameters should be initialized to ones and shift
+        # parameters should be initialized to zeros.
+        ########################################################################
+
+        layer_counter = 1
+        next_input_dim = input_dim
+        # pdb.set_trace()
+        for layer in range(self.num_layers):
+            if layer == 0:
+                hidden_dim = hidden_dims[layer]
+                self.params['W1'] = weight_scale * \
+                    np.random.randn(next_input_dim, hidden_dim)
+                self.params['b1'] = np.zeros(hidden_dim)
+                next_input_dim = hidden_dim
+            elif layer == self.num_layers - 1:
+                # final layer
+                layer_counter += 1
+                W_name = 'W' + str(layer_counter)
+                b_name = 'b' + str(layer_counter)
+                self.params[W_name] = weight_scale * \
+                    np.random.randn(next_input_dim, num_classes)
+                self.params[b_name] = np.zeros(num_classes)
+
+            else:
+                layer_counter += 1
+                W_name = 'W' + str(layer_counter)
+                b_name = 'b' + str(layer_counter)
+                hidden_dim = hidden_dims[layer]
+                self.params[W_name] = weight_scale * \
+                    np.random.randn(next_input_dim, hidden_dim)
+                self.params[b_name] = np.zeros(hidden_dim)
+                next_input_dim = hidden_dim
 
         # When using dropout we need to pass a dropout_param dictionary to each
         # dropout layer so that the layer knows the dropout probability and the mode
@@ -184,15 +252,15 @@ class FullyConnectedNet(object):
         # of the first batch normalization layer, self.bn_params[1] to the forward
         # pass of the second batch normalization layer, etc.
         self.bn_params = []
-        if self.normalization=='batchnorm':
-            self.bn_params = [{'mode': 'train'} for i in range(self.num_layers - 1)]
-        if self.normalization=='layernorm':
+        if self.normalization == 'batchnorm':
+            self.bn_params = [{'mode': 'train'}
+                              for i in range(self.num_layers - 1)]
+        if self.normalization == 'layernorm':
             self.bn_params = [{} for i in range(self.num_layers - 1)]
 
         # Cast all parameters to the correct datatype
         for k, v in self.params.items():
             self.params[k] = v.astype(dtype)
-
 
     def loss(self, X, y=None):
         """
@@ -207,48 +275,99 @@ class FullyConnectedNet(object):
         # behave differently during training and testing.
         if self.use_dropout:
             self.dropout_param['mode'] = mode
-        if self.normalization=='batchnorm':
+        if self.normalization == 'batchnorm':
             for bn_param in self.bn_params:
                 bn_param['mode'] = mode
         scores = None
-        ############################################################################
-        # TODO: Implement the forward pass for the fully-connected net, computing  #
-        # the class scores for X and storing them in the scores variable.          #
-        #                                                                          #
-        # When using dropout, you'll need to pass self.dropout_param to each       #
-        # dropout forward pass.                                                    #
-        #                                                                          #
-        # When using batch normalization, you'll need to pass self.bn_params[0] to #
-        # the forward pass for the first batch normalization layer, pass           #
-        # self.bn_params[1] to the forward pass for the second batch normalization #
-        # layer, etc.                                                              #
-        ############################################################################
-        pass
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
+        ########################################################################
+        # Implement the forward pass for the fully-connected net, computing
+        # the class scores for X and storing them in the scores variable.
+        #
+        # When using dropout, you'll need to pass self.dropout_param to each
+        # dropout forward pass.
+        #
+        # When using batch normalization, you'll need to pass self.bn_params[0]
+        # to the forward pass for the first batch normalization layer, pass
+        # self.bn_params[1] to the forward pass for the second batch
+        # normalization layer, etc.
+        ########################################################################
+
+        hidden_layers = {}
+        layer_counter = 1
+        weight_sums = 0
+
+        for layer in range(self.num_layers):
+            if layer == 0:
+                W1, b1 = self.params['W1'], self.params['b1']
+                D = np.prod(X.shape[1:])
+                X = X.reshape(-1, D)
+                hidden_layer_1 = np.maximum(0, np.dot(X, W1) + b1)
+                hidden_layers['hl_1'] = hidden_layer_1
+
+                weight_sums += np.sum(W1 * W1)
+
+            elif layer == self.num_layers - 1:
+                # final layer
+
+                layer_counter += 1
+                W_name = 'W' + str(layer_counter)
+                b_name = 'b' + str(layer_counter)
+                W = self.params[W_name]
+
+                previous_layer_n = 'hl_' + str(layer)
+                previous_layer = hidden_layers[previous_layer_n]
+                Z = np.dot(previous_layer, W) + self.params[b_name]
+                net_out = np.maximum(0, Z)
+                hidden_layers['out'] = net_out
+                scores = net_out
+                weight_sums += np.sum(W * W)
+
+            else:
+                layer_counter += 1
+                W_name = 'W' + str(layer_counter)
+                b_name = 'b' + str(layer_counter)
+                W = self.params[W_name]
+
+                previous_layer_n = 'hl_' + str(layer)
+                previous_layer = hidden_layers[previous_layer_n]
+                Z = np.dot(previous_layer, W) + self.params[b_name]
+                Z_relu = np.maximum(0, Z)
+                current_layer_n = 'hl_' + str(layer_counter)
+                hidden_layers[current_layer_n] = Z_relu
+
+                weight_sums += np.sum(W * W)
 
         # If test mode return early
         if mode == 'test':
             return scores
 
         loss, grads = 0.0, {}
-        ############################################################################
-        # TODO: Implement the backward pass for the fully-connected net. Store the #
-        # loss in the loss variable and gradients in the grads dictionary. Compute #
-        # data loss using softmax, and make sure that grads[k] holds the gradients #
-        # for self.params[k]. Don't forget to add L2 regularization!               #
-        #                                                                          #
-        # When using batch/layer normalization, you don't need to regularize the scale   #
-        # and shift parameters.                                                    #
-        #                                                                          #
-        # NOTE: To ensure that your implementation matches ours and you pass the   #
-        # automated tests, make sure that your L2 regularization includes a factor #
-        # of 0.5 to simplify the expression for the gradient.                      #
-        ############################################################################
-        pass
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
+        ########################################################################
+        # Implement the backward pass for the fully-connected net. Store the
+        # loss in the loss variable and gradients in the grads dictionary.
+        # Compute data loss using softmax, and make sure that grads[k] holds the
+        # gradients for self.params[k]. Don't forget to add L2 regularization!
+        #
+        # When using batch/layer normalization, you don't need to regularize the
+        # scale and shift parameters.
+        #
+        # NOTE: To ensure that your implementation matches ours and you pass the
+        # automated tests, make sure that your L2 regularization includes a
+        # factor of 0.5 to simplify the expression for the gradient.
+        ########################################################################
+        N = X.shape[0]
+        shifted_logits = scores - np.max(scores, axis=1, keepdims=True)
+        Z = np.sum(np.exp(shifted_logits), axis=1, keepdims=True)
+        log_probs = shifted_logits - np.log(Z)
+        probs = np.exp(log_probs)
+        data_loss = -np.sum(log_probs[np.arange(N), y]) / N
+
+        reg_loss = 0.5 * self.reg * weight_sums
+
+        loss = data_loss + reg_loss
+
+        dscores = probs
+        dscores[range(N), y] -= 1
+        dscores /= N
 
         return loss, grads
