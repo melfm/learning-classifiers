@@ -145,9 +145,6 @@ class TwoLayerNet(object):
         return loss, grads
 
 
-import pdb
-
-
 class FullyConnectedNet(object):
     """
     A fully-connected neural network with an arbitrary number of hidden layers,
@@ -210,7 +207,6 @@ class FullyConnectedNet(object):
 
         layer_counter = 1
         next_input_dim = input_dim
-        # pdb.set_trace()
         for layer in range(self.num_layers):
             if layer == 0:
                 hidden_dim = hidden_dims[layer]
@@ -293,7 +289,7 @@ class FullyConnectedNet(object):
         ########################################################################
 
         hidden_layers = {}
-        layer_counter = 1
+        layer_counter = 0
         weight_sums = 0
 
         for layer in range(self.num_layers):
@@ -304,22 +300,25 @@ class FullyConnectedNet(object):
                 hidden_layer_1 = np.maximum(0, np.dot(X, W1) + b1)
                 hidden_layers['hl_1'] = hidden_layer_1
 
+                layer_counter = 1
+
                 weight_sums += np.sum(W1 * W1)
 
             elif layer == self.num_layers - 1:
                 # final layer
-
                 layer_counter += 1
                 W_name = 'W' + str(layer_counter)
                 b_name = 'b' + str(layer_counter)
                 W = self.params[W_name]
 
-                previous_layer_n = 'hl_' + str(layer)
+                previous_layer_n = 'hl_' + str(layer_counter - 1)
                 previous_layer = hidden_layers[previous_layer_n]
-                Z = np.dot(previous_layer, W) + self.params[b_name]
-                net_out = np.maximum(0, Z)
-                hidden_layers['out'] = net_out
+
+                net_out = np.dot(previous_layer, W) + self.params[b_name]
+                current_layer_n = 'hl_' + str(layer_counter)
+                hidden_layers[current_layer_n] = net_out
                 scores = net_out
+
                 weight_sums += np.sum(W * W)
 
             else:
@@ -328,8 +327,9 @@ class FullyConnectedNet(object):
                 b_name = 'b' + str(layer_counter)
                 W = self.params[W_name]
 
-                previous_layer_n = 'hl_' + str(layer)
+                previous_layer_n = 'hl_' + str(layer_counter - 1)
                 previous_layer = hidden_layers[previous_layer_n]
+
                 Z = np.dot(previous_layer, W) + self.params[b_name]
                 Z_relu = np.maximum(0, Z)
                 current_layer_n = 'hl_' + str(layer_counter)
@@ -369,5 +369,53 @@ class FullyConnectedNet(object):
         dscores = probs
         dscores[range(N), y] -= 1
         dscores /= N
+
+        previous_layer = self.num_layers
+        previous_dlayer = None
+        for layer in range(self.num_layers, 0, -1):
+            W_name = 'W' + str(layer)
+            b_name = 'b' + str(layer)
+
+            if layer == self.num_layers:
+                # Last layer
+                previous_layer_n = 'hl_' + str(layer - 1)
+                dW = np.dot(hidden_layers[previous_layer_n].T,
+                            dscores)
+                db = np.sum(dscores, axis=0, keepdims=True)
+
+                dW += self.reg * self.params[W_name]
+                grads[W_name] = dW
+                grads[b_name] = db
+
+                dhidden_l = np.dot(dscores, self.params[W_name].T)
+                dhidden_l[hidden_layers[previous_layer_n] <= 0] = 0
+                previous_dlayer = dhidden_l
+
+                previous_layer -= 1
+
+            elif layer == 1:
+                # First layer
+                dW1 = np.dot(X.T, previous_dlayer)
+                db1 = np.sum(previous_dlayer, axis=0, keepdims=True)
+                dW1 += self.reg * self.params[W_name]
+                grads['W1'] = dW1
+                grads['b1'] = db1
+
+            else:
+                previous_layer_n = 'hl_' + str(layer - 1)
+                dW = np.dot(hidden_layers[previous_layer_n].T,
+                            previous_dlayer)
+                db = np.sum(previous_dlayer, axis=0, keepdims=True)
+                dW_n = W_name
+                db_n = 'b' + str(layer)
+                dW += self.reg * self.params[W_name]
+                grads[dW_n] = dW
+                grads[db_n] = db
+
+                dhidden_l = np.dot(previous_dlayer, self.params[W_name].T)
+                dhidden_l[hidden_layers[previous_layer_n] <= 0] = 0
+                previous_dlayer = dhidden_l
+
+                previous_layer -= 1
 
         return loss, grads
