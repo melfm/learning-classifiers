@@ -381,7 +381,7 @@ class FullyConnectedNet(object):
                 previous_layer_n = 'hl_' + str(layer - 1)
                 dW = np.dot(hidden_layers[previous_layer_n].T,
                             dscores)
-                db = np.sum(dscores, axis=0, keepdims=True)
+                db = np.ones((N)).dot(dscores)
 
                 dW += self.reg * self.params[W_name]
                 grads[W_name] = dW
@@ -396,7 +396,7 @@ class FullyConnectedNet(object):
             elif layer == 1:
                 # First layer
                 dW1 = np.dot(X.T, previous_dlayer)
-                db1 = np.sum(previous_dlayer, axis=0, keepdims=True)
+                db1 = np.ones((N)).dot(previous_dlayer)
                 dW1 += self.reg * self.params[W_name]
                 grads['W1'] = dW1
                 grads['b1'] = db1
@@ -405,7 +405,7 @@ class FullyConnectedNet(object):
                 previous_layer_n = 'hl_' + str(layer - 1)
                 dW = np.dot(hidden_layers[previous_layer_n].T,
                             previous_dlayer)
-                db = np.sum(previous_dlayer, axis=0, keepdims=True)
+                db = np.ones((N)).dot(previous_dlayer)
                 dW_n = W_name
                 db_n = 'b' + str(layer)
                 dW += self.reg * self.params[W_name]
