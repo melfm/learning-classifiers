@@ -2,11 +2,8 @@ from builtins import range
 from builtins import object
 import numpy as np
 
-#from cs231n import layers as layers
-#from cs231n import layer_utils as lutil
-from cs231n.layer_utils import *
-
-from cs231n.layers import *
+from cs231n import layers as layers
+# from cs231n import layer_utils as lutil
 
 
 class TwoLayerNet(object):
@@ -149,13 +146,11 @@ class TwoLayerNet(object):
 
 
 # Batch normalization helper functions
-
-
 def affine_norm_relu_forward(x, w, b, gamma, beta, bn_param):
 
-    hidden_l, cache = affine_forward(x, w, b)
-    b_norm, b_cache = batchnorm_forward(hidden_l, gamma, beta, bn_param)
-    b_norm_relu, relu_cache = relu_forward(b_norm)
+    hidden_l, cache = layers.affine_forward(x, w, b)
+    b_norm, b_cache = layers.batchnorm_forward(hidden_l, gamma, beta, bn_param)
+    b_norm_relu, relu_cache = layers.relu_forward(b_norm)
 
     cache = (cache, b_cache, relu_cache)
 
@@ -165,9 +160,10 @@ def affine_norm_relu_forward(x, w, b, gamma, beta, bn_param):
 def affine_norm_relu_backward(dout, cache):
 
     cache, b_cache, relu_cache = cache
-    db_norm_relu = relu_backward(dout, relu_cache)
-    db_norm, dgamma, dbeta = batchnorm_backward_alt(db_norm_relu, b_cache)
-    dx, dw, db = affine_backward(db_norm, cache)
+    db_norm_relu = layers.relu_backward(dout, relu_cache)
+    db_norm, dgamma, dbeta = layers.batchnorm_backward_alt(
+        db_norm_relu, b_cache)
+    dx, dw, db = layers.affine_backward(db_norm, cache)
 
     return dx, dw, db, dgamma, dbeta
 
@@ -176,13 +172,13 @@ class FullyConnectedNet(object):
     """
     A fully-connected neural network with an arbitrary number of hidden layers,
     ReLU nonlinearities, and a softmax loss function. This will also implement
-    dropout and batch/layer normalization as options. For a network with L layers,
-    the architecture will be
+    dropout and batch/layer normalization as options. For a network with L
+    layers, the architecture will be
 
-    {affine - [batch/layer norm] - relu - [dropout]} x (L - 1) - affine - softmax
+    {affine - [batch/layer norm] - relu - [dropout]} x (L-1) - affine - softmax
 
-    where batch/layer normalization and dropout are optional, and the {...} block is
-    repeated L - 1 times.
+    where batch/layer normalization and dropout are optional, and the {...}
+    block is repeated L - 1 times.
 
     Similar to the TwoLayerNet above, learnable parameters are stored in the
     self.params dictionary and will be learned using the Solver class.
@@ -198,19 +194,20 @@ class FullyConnectedNet(object):
         - hidden_dims: A list of integers giving the size of each hidden layer.
         - input_dim: An integer giving the size of the input.
         - num_classes: An integer giving the number of classes to classify.
-        - dropout: Scalar between 0 and 1 giving dropout strength. If dropout=1 then
-          the network should not use dropout at all.
-        - normalization: What type of normalization the network should use. Valid values
-          are "batchnorm", "layernorm", or None for no normalization (the default).
+        - dropout: Scalar between 0 and 1 giving dropout strength. If dropout=1
+            then the network should not use dropout at all.
+        - normalization: What type of normalization the network should use.
+            Valid values are "batchnorm", "layernorm", or None for no
+            normalization (the default).
         - reg: Scalar giving L2 regularization strength.
         - weight_scale: Scalar giving the standard deviation for random
           initialization of the weights.
-        - dtype: A numpy datatype object; all computations will be performed using
-          this datatype. float32 is faster but less accurate, so you should use
-          float64 for numeric gradient checking.
-        - seed: If not None, then pass this random seed to the dropout layers. This
-          will make the dropout layers deteriminstic so we can gradient check the
-          model.
+        - dtype: A numpy datatype object; all computations will be performed
+            using this datatype. float32 is faster but less accurate, so you
+            should use float64 for numeric gradient checking.
+        - seed: If not None, then pass this random seed to the dropout layers.
+            This will make the dropout layers deteriminstic so we can gradient
+            check the model.
         """
         self.normalization = normalization
         self.use_dropout = dropout != 1
@@ -242,8 +239,9 @@ class FullyConnectedNet(object):
                     np.random.randn(next_input_dim, hidden_dim)
                 self.params['b1'] = np.zeros(hidden_dim)
 
-                self.params['gamma1'] = np.random.randn(hidden_dim)
-                self.params['beta1'] = np.random.randn(hidden_dim)
+                if self.normalization == 'batchnorm':
+                    self.params['gamma1'] = np.random.randn(hidden_dim)
+                    self.params['beta1'] = np.random.randn(hidden_dim)
                 next_input_dim = hidden_dim
 
             elif layer == self.num_layers - 1:
@@ -266,8 +264,9 @@ class FullyConnectedNet(object):
                 self.params[W_name] = weight_scale * \
                     np.random.randn(next_input_dim, hidden_dim)
                 self.params[b_name] = np.zeros(hidden_dim)
-                self.params[g_name] = np.random.randn(hidden_dim)
-                self.params[beta_name] = np.random.randn(hidden_dim)
+                if self.normalization == 'batchnorm':
+                    self.params[g_name] = np.random.randn(hidden_dim)
+                    self.params[beta_name] = np.random.randn(hidden_dim)
                 next_input_dim = hidden_dim
 
         # When using dropout we need to pass a dropout_param dictionary to each
@@ -350,13 +349,7 @@ class FullyConnectedNet(object):
 
                     hidden_layers['hl_1'] = h_bnorm
                     bn_caches['b_cache1'] = cache_h
-                    """
-                    # Batch normalization
-                    out, cache = layers.batchnorm_forward(
-                        hidden_layer_1, self.params['gamma1'],
-                        self.params['beta1'],
-                        bn_param)
-                    """
+
                 else:
                     hidden_layers['hl_1'] = hidden_layer_1
 
@@ -381,8 +374,6 @@ class FullyConnectedNet(object):
                 layer_counter += 1
                 W_name = 'W' + str(layer_counter)
                 b_name = 'b' + str(layer_counter)
-                g_name = 'gamma' + str(layer_counter)
-                beta_name = 'beta' + str(layer_counter)
                 W = self.params[W_name]
 
                 previous_layer_n = 'hl_' + str(layer_counter - 1)
@@ -408,17 +399,7 @@ class FullyConnectedNet(object):
 
                     b_cache_name = 'b_cache' + str(layer_counter)
                     bn_caches[b_cache_name] = cache_h
-                    """
-                    bn_param = self.bn_params[layer]
-                    out, cache = batchnorm_forward(
-                        Z_relu, self.params[g_name],
-                        self.params[beta_name], bn_param)
 
-                    beta_name = 'beta' + str(layer_counter)
-
-                    bn_caches[b_cache_name] = cache
-                    hidden_layers[current_layer_n] = out
-                    """
                 else:
 
                     hidden_layers[current_layer_n] = Z_relu
@@ -461,8 +442,6 @@ class FullyConnectedNet(object):
         for layer in range(self.num_layers, 0, -1):
             W_name = 'W' + str(layer)
             b_name = 'b' + str(layer)
-            g_name = 'gamma' + str(layer)
-            beta_name = 'beta' + str(layer)
 
             if layer == self.num_layers:
                 # Last layer
@@ -493,6 +472,9 @@ class FullyConnectedNet(object):
                     grads['beta1'] = dbeta
 
                     previous_dlayer = dh
+                else:
+                    dW1 = np.dot(X.T, previous_dlayer)
+                    db = np.ones((N)).dot(previous_dlayer)
 
                 dW1 += self.reg * self.params[W_name]
                 grads['W1'] = dW1
