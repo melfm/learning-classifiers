@@ -2,8 +2,11 @@ from builtins import range
 from builtins import object
 import numpy as np
 
-from cs231n.layers import *
+#from cs231n import layers as layers
+#from cs231n import layer_utils as lutil
 from cs231n.layer_utils import *
+
+from cs231n.layers import *
 
 
 class TwoLayerNet(object):
@@ -145,6 +148,30 @@ class TwoLayerNet(object):
         return loss, grads
 
 
+# Batch normalization helper functions
+
+
+def affine_norm_relu_forward(x, w, b, gamma, beta, bn_param):
+
+    hidden_l, cache = affine_forward(x, w, b)
+    b_norm, b_cache = batchnorm_forward(hidden_l, gamma, beta, bn_param)
+    b_norm_relu, relu_cache = relu_forward(b_norm)
+
+    cache = (cache, b_cache, relu_cache)
+
+    return b_norm_relu, cache
+
+
+def affine_norm_relu_backward(dout, cache):
+
+    cache, b_cache, relu_cache = cache
+    db_norm_relu = relu_backward(dout, relu_cache)
+    db_norm, dgamma, dbeta = batchnorm_backward_alt(db_norm_relu, b_cache)
+    dx, dw, db = affine_backward(db_norm, cache)
+
+    return dx, dw, db, dgamma, dbeta
+
+
 class FullyConnectedNet(object):
     """
     A fully-connected neural network with an arbitrary number of hidden layers,
@@ -205,6 +232,7 @@ class FullyConnectedNet(object):
         # parameters should be initialized to zeros.
         ########################################################################
 
+        # TODO: Make the initialization nicer
         layer_counter = 1
         next_input_dim = input_dim
         for layer in range(self.num_layers):
@@ -213,7 +241,11 @@ class FullyConnectedNet(object):
                 self.params['W1'] = weight_scale * \
                     np.random.randn(next_input_dim, hidden_dim)
                 self.params['b1'] = np.zeros(hidden_dim)
+
+                self.params['gamma1'] = np.random.randn(hidden_dim)
+                self.params['beta1'] = np.random.randn(hidden_dim)
                 next_input_dim = hidden_dim
+
             elif layer == self.num_layers - 1:
                 # final layer
                 layer_counter += 1
@@ -227,15 +259,21 @@ class FullyConnectedNet(object):
                 layer_counter += 1
                 W_name = 'W' + str(layer_counter)
                 b_name = 'b' + str(layer_counter)
+                g_name = 'gamma' + str(layer_counter)
+                beta_name = 'beta' + str(layer_counter)
                 hidden_dim = hidden_dims[layer]
+
                 self.params[W_name] = weight_scale * \
                     np.random.randn(next_input_dim, hidden_dim)
                 self.params[b_name] = np.zeros(hidden_dim)
+                self.params[g_name] = np.random.randn(hidden_dim)
+                self.params[beta_name] = np.random.randn(hidden_dim)
                 next_input_dim = hidden_dim
 
         # When using dropout we need to pass a dropout_param dictionary to each
-        # dropout layer so that the layer knows the dropout probability and the mode
-        # (train / test). You can pass the same dropout_param to each dropout layer.
+        # dropout layer so that the layer knows the dropout probability and the
+        # mode (train / test). You can pass the same dropout_param to each
+        # dropout layer.
         self.dropout_param = {}
         if self.use_dropout:
             self.dropout_param = {'mode': 'train', 'p': dropout}
@@ -244,9 +282,9 @@ class FullyConnectedNet(object):
 
         # With batch normalization we need to keep track of running means and
         # variances, so we need to pass a special bn_param object to each batch
-        # normalization layer. You should pass self.bn_params[0] to the forward pass
-        # of the first batch normalization layer, self.bn_params[1] to the forward
-        # pass of the second batch normalization layer, etc.
+        # normalization layer. You should pass self.bn_params[0] to the forward
+        # pass of the first batch normalization layer, self.bn_params[1] to the
+        # forward pass of the second batch normalization layer, etc.
         self.bn_params = []
         if self.normalization == 'batchnorm':
             self.bn_params = [{'mode': 'train'}
@@ -291,18 +329,36 @@ class FullyConnectedNet(object):
         hidden_layers = {}
         layer_counter = 0
         weight_sums = 0
+        bn_caches = {}
 
         for layer in range(self.num_layers):
             if layer == 0:
+                layer_counter = 1
                 W1, b1 = self.params['W1'], self.params['b1']
                 D = np.prod(X.shape[1:])
                 X = X.reshape(-1, D)
                 hidden_layer_1 = np.maximum(0, np.dot(X, W1) + b1)
-                hidden_layers['hl_1'] = hidden_layer_1
 
-                layer_counter = 1
-
+                # Used for regularization
                 weight_sums += np.sum(W1 * W1)
+                if self.normalization == 'batchnorm':
+
+                    bn_param = self.bn_params[layer]
+                    h_bnorm, cache_h = affine_norm_relu_forward(
+                        X, W1, b1, self.params['gamma1'],
+                        self.params['beta1'], bn_param)
+
+                    hidden_layers['hl_1'] = h_bnorm
+                    bn_caches['b_cache1'] = cache_h
+                    """
+                    # Batch normalization
+                    out, cache = layers.batchnorm_forward(
+                        hidden_layer_1, self.params['gamma1'],
+                        self.params['beta1'],
+                        bn_param)
+                    """
+                else:
+                    hidden_layers['hl_1'] = hidden_layer_1
 
             elif layer == self.num_layers - 1:
                 # final layer
@@ -325,6 +381,8 @@ class FullyConnectedNet(object):
                 layer_counter += 1
                 W_name = 'W' + str(layer_counter)
                 b_name = 'b' + str(layer_counter)
+                g_name = 'gamma' + str(layer_counter)
+                beta_name = 'beta' + str(layer_counter)
                 W = self.params[W_name]
 
                 previous_layer_n = 'hl_' + str(layer_counter - 1)
@@ -333,9 +391,37 @@ class FullyConnectedNet(object):
                 Z = np.dot(previous_layer, W) + self.params[b_name]
                 Z_relu = np.maximum(0, Z)
                 current_layer_n = 'hl_' + str(layer_counter)
-                hidden_layers[current_layer_n] = Z_relu
 
                 weight_sums += np.sum(W * W)
+
+                if self.normalization == 'batchnorm':
+
+                    # Batch normalization
+
+                    bn_param = self.bn_params[layer]
+                    h_bnorm, cache_h = affine_norm_relu_forward(
+                        previous_layer, W, self.params[b_name],
+                        self.params['gamma' + str(layer_counter)],
+                        self.params['beta' + str(layer_counter)], bn_param)
+
+                    hidden_layers[current_layer_n] = h_bnorm
+
+                    b_cache_name = 'b_cache' + str(layer_counter)
+                    bn_caches[b_cache_name] = cache_h
+                    """
+                    bn_param = self.bn_params[layer]
+                    out, cache = batchnorm_forward(
+                        Z_relu, self.params[g_name],
+                        self.params[beta_name], bn_param)
+
+                    beta_name = 'beta' + str(layer_counter)
+
+                    bn_caches[b_cache_name] = cache
+                    hidden_layers[current_layer_n] = out
+                    """
+                else:
+
+                    hidden_layers[current_layer_n] = Z_relu
 
         # If test mode return early
         if mode == 'test':
@@ -375,6 +461,8 @@ class FullyConnectedNet(object):
         for layer in range(self.num_layers, 0, -1):
             W_name = 'W' + str(layer)
             b_name = 'b' + str(layer)
+            g_name = 'gamma' + str(layer)
+            beta_name = 'beta' + str(layer)
 
             if layer == self.num_layers:
                 # Last layer
@@ -395,26 +483,56 @@ class FullyConnectedNet(object):
 
             elif layer == 1:
                 # First layer
-                dW1 = np.dot(X.T, previous_dlayer)
-                db1 = np.ones((N)).dot(previous_dlayer)
+                if self.normalization == 'batchnorm':
+                    cache_n = bn_caches['b_cache1']
+
+                    dh, dW1, db, dgamma, dbeta = affine_norm_relu_backward(
+                        previous_dlayer, cache_n)
+
+                    grads['gamma1'] = dgamma
+                    grads['beta1'] = dbeta
+
+                    previous_dlayer = dh
+
                 dW1 += self.reg * self.params[W_name]
                 grads['W1'] = dW1
-                grads['b1'] = db1
+                grads['b1'] = db
 
             else:
-                previous_layer_n = 'hl_' + str(layer - 1)
-                dW = np.dot(hidden_layers[previous_layer_n].T,
-                            previous_dlayer)
-                db = np.ones((N)).dot(previous_dlayer)
-                dW_n = W_name
-                db_n = 'b' + str(layer)
-                dW += self.reg * self.params[W_name]
-                grads[dW_n] = dW
-                grads[db_n] = db
 
-                dhidden_l = np.dot(previous_dlayer, self.params[W_name].T)
-                dhidden_l[hidden_layers[previous_layer_n] <= 0] = 0
-                previous_dlayer = dhidden_l
+                previous_layer_n = 'hl_' + str(layer - 1)
+                if self.normalization == 'batchnorm':
+                    cache_n = bn_caches['b_cache'+str(layer)]
+
+                    dh, dW, db, dgamma, dbeta = affine_norm_relu_backward(
+                        previous_dlayer, cache_n)
+
+                    dW_n = W_name
+                    db_n = 'b' + str(layer)
+                    dg_n = 'gamma' + str(layer)
+                    dbeta_n = 'beta' + str(layer)
+                    dW += self.reg * self.params[W_name]
+                    grads[dW_n] = dW
+                    grads[db_n] = db
+                    grads[dg_n] = dgamma
+                    grads[dbeta_n] = dbeta
+
+                    # update this
+                    previous_dlayer = dh
+
+                else:
+                    dW = np.dot(hidden_layers[previous_layer_n].T,
+                                previous_dlayer)
+                    db = np.ones((N)).dot(previous_dlayer)
+                    dW_n = W_name
+                    db_n = 'b' + str(layer)
+                    dW += self.reg * self.params[W_name]
+                    grads[dW_n] = dW
+                    grads[db_n] = db
+
+                    dhidden_l = np.dot(previous_dlayer, self.params[W_name].T)
+                    dhidden_l[hidden_layers[previous_layer_n] <= 0] = 0
+                    previous_dlayer = dhidden_l
 
                 previous_layer -= 1
 
