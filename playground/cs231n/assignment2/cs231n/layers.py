@@ -281,7 +281,7 @@ def batchnorm_backward_alt(dout, cache):
 
     return dx, dgamma, dbeta
 
-
+import pdb
 def layernorm_forward(x, gamma, beta, ln_param):
     """
     Forward pass for layer normalization.
@@ -316,10 +316,16 @@ def layernorm_forward(x, gamma, beta, ln_param):
     # transformations you could perform, that would enable you to copy over   #
     # the batch norm code and leave it almost unchanged?                      #
     ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    N, D = x.shape
+    sample_mean = np.mean(x, axis=1)
+    sample_var = np.var(x, axis=1)
+
+    vareps = sample_var + eps
+    x_normalized = (x.T - sample_mean) / np.sqrt(vareps)
+    out = x_normalized.T * gamma + beta
+
+    cache = (x, gamma, sample_mean, vareps, x_normalized)
+
     return out, cache
 
 
@@ -347,11 +353,28 @@ def layernorm_backward(dout, cache):
     # implementation of batch normalization. The hints to the forward pass    #
     # still apply!                                                            #
     ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
-    return dx, dgamma, dbeta
+    x = cache[0]
+    N = x.shape[0]
+    gamma = cache[1]
+    sample_mean = cache[2]
+    vareps = cache[3]
+    x_normalized = cache[4]
+
+
+    x_mu = x.T - sample_mean
+    dx_norm = dout * gamma
+
+    dbeta = np.sum(dout, axis=0)
+    dgamma = np.sum(dout * x_normalized.T, axis=0)
+
+    std_inv = 1/np.sqrt(vareps)
+
+    dvar = np.sum(dx_norm.T * x_mu, axis=0) * -.5 * np.power(vareps, -3/2)
+    dmu = np.sum(dx_norm.T * -std_inv, axis=0) + dvar * np.mean(-2. * x_mu, axis=0)
+
+    dx = (dx_norm.T * std_inv) + (dvar * 2 * x_mu / N) + (dmu / N)
+
+    return dx.T, dgamma, dbeta
 
 
 def dropout_forward(x, dropout_param):
