@@ -271,8 +271,8 @@ def batchnorm_backward_alt(dout, cache):
     std_inv = 1/np.sqrt(vareps)
 
     dvar = np.sum(dx_norm * x_mu, axis=0) * -.5 * np.power(vareps, -3/2)
-    dmu = np.sum(dx_norm * -std_inv,
-                 axis=0) + dvar * np.mean(-2. * x_mu, axis=0)
+    dmu = np.sum(dx_norm * -std_inv, axis=0) +\
+        dvar * np.mean(-2. * x_mu, axis=0)
 
     dx = (dx_norm * std_inv) + (dvar * 2 * x_mu / N) + (dmu / N)
     ###########################################################################
@@ -281,7 +281,7 @@ def batchnorm_backward_alt(dout, cache):
 
     return dx, dgamma, dbeta
 
-import pdb
+
 def layernorm_forward(x, gamma, beta, ln_param):
     """
     Forward pass for layer normalization.
@@ -354,12 +354,11 @@ def layernorm_backward(dout, cache):
     # still apply!                                                            #
     ###########################################################################
     x = cache[0]
-    N = x.shape[0]
+    D = x.shape[1]
     gamma = cache[1]
     sample_mean = cache[2]
     vareps = cache[3]
     x_normalized = cache[4]
-
 
     x_mu = x.T - sample_mean
     dx_norm = dout * gamma
@@ -370,9 +369,10 @@ def layernorm_backward(dout, cache):
     std_inv = 1/np.sqrt(vareps)
 
     dvar = np.sum(dx_norm.T * x_mu, axis=0) * -.5 * np.power(vareps, -3/2)
-    dmu = np.sum(dx_norm.T * -std_inv, axis=0) + dvar * np.mean(-2. * x_mu, axis=0)
+    dmu = np.sum(dx_norm.T * -std_inv,
+                 axis=0) + dvar * np.mean(-2. * x_mu, axis=0)
 
-    dx = (dx_norm.T * std_inv) + (dvar * 2 * x_mu / N) + (dmu / N)
+    dx = (dx_norm.T * std_inv) + (dvar * 2 * x_mu / D) + (dmu / D)
 
     return dx.T, dgamma, dbeta
 
