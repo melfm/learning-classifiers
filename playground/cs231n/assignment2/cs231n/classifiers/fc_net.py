@@ -146,10 +146,18 @@ class TwoLayerNet(object):
 
 
 # Batch normalization helper functions
-def affine_norm_relu_forward(x, w, b, gamma, beta, bn_param):
+def affine_norm_relu_forward(x, w, b, gamma, beta, bn_param, normalization):
 
     hidden_l, cache = layers.affine_forward(x, w, b)
-    b_norm, b_cache = layers.batchnorm_forward(hidden_l, gamma, beta, bn_param)
+    if normalization == 'batchnorm':
+        b_norm, b_cache = layers.batchnorm_forward(hidden_l, gamma,
+                                                   beta, bn_param)
+    elif normalization == 'layernorm':
+        b_norm, b_cache = layers.layernorm_forward(hidden_l, gamma,
+                                                   beta, bn_param)
+    else:
+        raise ValueError('Invalid normalization forward method.')
+
     b_norm_relu, relu_cache = layers.relu_forward(b_norm)
 
     cache = (cache, b_cache, relu_cache)
@@ -157,12 +165,19 @@ def affine_norm_relu_forward(x, w, b, gamma, beta, bn_param):
     return b_norm_relu, cache
 
 
-def affine_norm_relu_backward(dout, cache):
+def affine_norm_relu_backward(dout, cache, normalization):
 
     cache, b_cache, relu_cache = cache
     db_norm_relu = layers.relu_backward(dout, relu_cache)
-    db_norm, dgamma, dbeta = layers.batchnorm_backward_alt(
-        db_norm_relu, b_cache)
+    if normalization == 'batchnorm':
+        db_norm, dgamma, dbeta = layers.batchnorm_backward_alt(
+            db_norm_relu, b_cache)
+    elif normalization == 'layernorm':
+        db_norm, dgamma, dbeta = layers.layernorm_backward(
+            db_norm_relu, b_cache)
+    else:
+        raise ValueError('Invalid normalization backward method.')
+
     dx, dw, db = layers.affine_backward(db_norm, cache)
 
     return dx, dw, db, dgamma, dbeta
@@ -239,7 +254,8 @@ class FullyConnectedNet(object):
                     np.random.randn(next_input_dim, hidden_dim)
                 self.params['b1'] = np.zeros(hidden_dim)
 
-                if self.normalization == 'batchnorm':
+                if self.normalization == 'batchnorm' or \
+                        self.normalization == 'layernorm':
                     self.params['gamma1'] = np.random.randn(hidden_dim)
                     self.params['beta1'] = np.random.randn(hidden_dim)
                 next_input_dim = hidden_dim
@@ -264,7 +280,8 @@ class FullyConnectedNet(object):
                 self.params[W_name] = weight_scale * \
                     np.random.randn(next_input_dim, hidden_dim)
                 self.params[b_name] = np.zeros(hidden_dim)
-                if self.normalization == 'batchnorm':
+                if self.normalization == 'batchnorm' or \
+                        self.normalization == 'layernorm':
                     self.params[g_name] = np.random.randn(hidden_dim)
                     self.params[beta_name] = np.random.randn(hidden_dim)
                 next_input_dim = hidden_dim
@@ -340,12 +357,14 @@ class FullyConnectedNet(object):
 
                 # Used for regularization
                 weight_sums += np.sum(W1 * W1)
-                if self.normalization == 'batchnorm':
+                if self.normalization == 'batchnorm' or \
+                        self.normalization == 'layernorm':
 
                     bn_param = self.bn_params[layer]
                     h_bnorm, cache_h = affine_norm_relu_forward(
                         X, W1, b1, self.params['gamma1'],
-                        self.params['beta1'], bn_param)
+                        self.params['beta1'], bn_param,
+                        self.normalization)
 
                     hidden_layers['hl_1'] = h_bnorm
                     bn_caches['b_cache1'] = cache_h
@@ -385,7 +404,8 @@ class FullyConnectedNet(object):
 
                 weight_sums += np.sum(W * W)
 
-                if self.normalization == 'batchnorm':
+                if self.normalization == 'batchnorm' or \
+                        self.normalization == 'layernorm':
 
                     # Batch normalization
 
@@ -393,7 +413,8 @@ class FullyConnectedNet(object):
                     h_bnorm, cache_h = affine_norm_relu_forward(
                         previous_layer, W, self.params[b_name],
                         self.params['gamma' + str(layer_counter)],
-                        self.params['beta' + str(layer_counter)], bn_param)
+                        self.params['beta' + str(layer_counter)], bn_param,
+                        self.normalization)
 
                     hidden_layers[current_layer_n] = h_bnorm
 
@@ -462,11 +483,12 @@ class FullyConnectedNet(object):
 
             elif layer == 1:
                 # First layer
-                if self.normalization == 'batchnorm':
+                if self.normalization == 'batchnorm' or \
+                        self.normalization == 'layernorm':
                     cache_n = bn_caches['b_cache1']
 
                     dh, dW1, db, dgamma, dbeta = affine_norm_relu_backward(
-                        previous_dlayer, cache_n)
+                        previous_dlayer, cache_n, self.normalization)
 
                     grads['gamma1'] = dgamma
                     grads['beta1'] = dbeta
@@ -483,11 +505,12 @@ class FullyConnectedNet(object):
             else:
 
                 previous_layer_n = 'hl_' + str(layer - 1)
-                if self.normalization == 'batchnorm':
+                if self.normalization == 'batchnorm' or \
+                        self.normalization == 'layernorm':
                     cache_n = bn_caches['b_cache'+str(layer)]
 
                     dh, dW, db, dgamma, dbeta = affine_norm_relu_backward(
-                        previous_dlayer, cache_n)
+                        previous_dlayer, cache_n,  self.normalization)
 
                     dW_n = W_name
                     db_n = 'b' + str(layer)
