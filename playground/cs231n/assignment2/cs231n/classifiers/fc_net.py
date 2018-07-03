@@ -146,7 +146,9 @@ class TwoLayerNet(object):
 
 
 # Batch normalization helper functions
-def affine_norm_relu_forward(x, w, b, gamma, beta, bn_param, normalization):
+def affine_norm_relu_forward(x, w, b, gamma, beta, bn_param,
+                             normalization, use_dropout=False,
+                             dropout_param=None):
 
     hidden_l, cache = layers.affine_forward(x, w, b)
     if normalization == 'batchnorm':
@@ -159,16 +161,28 @@ def affine_norm_relu_forward(x, w, b, gamma, beta, bn_param, normalization):
         raise ValueError('Invalid normalization forward method.')
 
     b_norm_relu, relu_cache = layers.relu_forward(b_norm)
-
     cache = (cache, b_cache, relu_cache)
+
+    if use_dropout:
+        b_norm_relu, dropout_cache = layers.dropout_forward(b_norm_relu,
+                                                            dropout_param)
+
+        return b_norm_relu, cache, dropout_cache
 
     return b_norm_relu, cache
 
 
-def affine_norm_relu_backward(dout, cache, normalization):
+def affine_norm_relu_backward(dout, cache, normalization,
+                              use_dropout=False, dropout_param=None,
+                              d_cache=None):
 
     cache, b_cache, relu_cache = cache
     db_norm_relu = layers.relu_backward(dout, relu_cache)
+
+    if use_dropout:
+        db_norm_relu = layers.dropout_backward(
+            db_norm_relu, d_cache)
+
     if normalization == 'batchnorm':
         db_norm, dgamma, dbeta = layers.batchnorm_backward_alt(
             db_norm_relu, b_cache)
@@ -346,6 +360,7 @@ class FullyConnectedNet(object):
         layer_counter = 0
         weight_sums = 0
         bn_caches = {}
+        dropout_caches = {}
 
         for layer in range(self.num_layers):
             if layer == 0:
@@ -354,6 +369,12 @@ class FullyConnectedNet(object):
                 D = np.prod(X.shape[1:])
                 X = X.reshape(-1, D)
                 hidden_layer_1 = np.maximum(0, np.dot(X, W1) + b1)
+                if self.use_dropout:
+                    d_param = self.dropout_param
+                    hidden_layer_1, cache = layers.dropout_forward(
+                                                                   hidden_layer_1,
+                                                                   d_param)
+                    dropout_caches['d_cache1'] = cache
 
                 # Used for regularization
                 weight_sums += np.sum(W1 * W1)
@@ -361,13 +382,25 @@ class FullyConnectedNet(object):
                         self.normalization == 'layernorm':
 
                     bn_param = self.bn_params[layer]
-                    h_bnorm, cache_h = affine_norm_relu_forward(
-                        X, W1, b1, self.params['gamma1'],
-                        self.params['beta1'], bn_param,
-                        self.normalization)
+                    if self.use_dropout:
+                        h_bnorm, cache_h, d_cache = affine_norm_relu_forward(
+                            X, W1, b1, self.params['gamma1'],
+                            self.params['beta1'], bn_param,
+                            self.normalization,
+                            self.use_dropout,
+                            self.dropout_param)
+                        d_cache_name = 'd_cache' + str(layer_counter)
+                        dropout_caches[d_cache_name] = d_cache
+
+                    else:
+                        h_bnorm, cache_h = affine_norm_relu_forward(
+                            X, W1, b1, self.params['gamma1'],
+                            self.params['beta1'], bn_param,
+                            self.normalization)
 
                     hidden_layers['hl_1'] = h_bnorm
                     bn_caches['b_cache1'] = cache_h
+
 
                 else:
                     hidden_layers['hl_1'] = hidden_layer_1
@@ -400,6 +433,13 @@ class FullyConnectedNet(object):
 
                 Z = np.dot(previous_layer, W) + self.params[b_name]
                 Z_relu = np.maximum(0, Z)
+                if self.use_dropout:
+                    d_param = self.dropout_param
+                    Z_relu, cache = layers.dropout_forward(Z_relu,
+                                                           d_param)
+                    d_name = 'd_cache' + str(layer_counter)
+                    dropout_caches[d_name] = cache
+
                 current_layer_n = 'hl_' + str(layer_counter)
 
                 weight_sums += np.sum(W * W)
@@ -408,13 +448,24 @@ class FullyConnectedNet(object):
                         self.normalization == 'layernorm':
 
                     # Batch normalization
-
                     bn_param = self.bn_params[layer]
-                    h_bnorm, cache_h = affine_norm_relu_forward(
-                        previous_layer, W, self.params[b_name],
-                        self.params['gamma' + str(layer_counter)],
-                        self.params['beta' + str(layer_counter)], bn_param,
-                        self.normalization)
+                    if self.use_dropout:
+                        h_bnorm, cache_h, d_cache = affine_norm_relu_forward(
+                            previous_layer, W, self.params[b_name],
+                            self.params['gamma' + str(layer_counter)],
+                            self.params['beta' + str(layer_counter)], bn_param,
+                            self.normalization,
+                            self.use_dropout,
+                            self.dropout_param)
+                        d_cache_name = 'd_cache' + str(layer_counter)
+                        dropout_caches[d_cache_name] = d_cache
+
+                    else:
+                        h_bnorm, cache_h = affine_norm_relu_forward(
+                            previous_layer, W, self.params[b_name],
+                            self.params['gamma' + str(layer_counter)],
+                            self.params['beta' + str(layer_counter)],
+                            bn_param, self.normalization)
 
                     hidden_layers[current_layer_n] = h_bnorm
 
@@ -479,16 +530,29 @@ class FullyConnectedNet(object):
                 dhidden_l[hidden_layers[previous_layer_n] <= 0] = 0
                 previous_dlayer = dhidden_l
 
+                if self.use_dropout:
+                    d_name = 'd_cache' + str(layer - 1)
+                    d_cache = dropout_caches[d_name]
+                    previous_dlayer = layers.dropout_backward(previous_dlayer,
+                                                              d_cache)
+
                 previous_layer -= 1
 
             elif layer == 1:
                 # First layer
                 if self.normalization == 'batchnorm' or \
                         self.normalization == 'layernorm':
-                    cache_n = bn_caches['b_cache1']
 
-                    dh, dW1, db, dgamma, dbeta = affine_norm_relu_backward(
-                        previous_dlayer, cache_n, self.normalization)
+                    cache_n = bn_caches['b_cache1']
+                    if self.use_dropout:
+                        d_cache = dropout_caches['d_cache1']
+
+                        dh, dW1, db, dgamma, dbeta = affine_norm_relu_backward(
+                            previous_dlayer, cache_n, self.normalization,
+                            self.use_dropout, self.dropout_param, d_cache)
+                    else:
+                        dh, dW1, db, dgamma, dbeta = affine_norm_relu_backward(
+                            previous_dlayer, cache_n, self.normalization)
 
                     grads['gamma1'] = dgamma
                     grads['beta1'] = dbeta
@@ -509,8 +573,16 @@ class FullyConnectedNet(object):
                         self.normalization == 'layernorm':
                     cache_n = bn_caches['b_cache'+str(layer)]
 
-                    dh, dW, db, dgamma, dbeta = affine_norm_relu_backward(
-                        previous_dlayer, cache_n,  self.normalization)
+                    if self.use_dropout:
+                        dname = 'd_cache'+str(layer)
+                        d_cache = dropout_caches[dname]
+
+                        dh, dW, db, dgamma, dbeta = affine_norm_relu_backward(
+                            previous_dlayer, cache_n,  self.normalization,
+                            self.use_dropout, self.dropout_param, d_cache)
+                    else:
+                        dh, dW, db, dgamma, dbeta = affine_norm_relu_backward(
+                            previous_dlayer, cache_n,  self.normalization)
 
                     dW_n = W_name
                     db_n = 'b' + str(layer)
@@ -538,6 +610,13 @@ class FullyConnectedNet(object):
                     dhidden_l = np.dot(previous_dlayer, self.params[W_name].T)
                     dhidden_l[hidden_layers[previous_layer_n] <= 0] = 0
                     previous_dlayer = dhidden_l
+
+                    if self.use_dropout:
+                        d_param = self.dropout_param
+                        d_name = 'd_cache' + str(layer - 1)
+                        d_cache = dropout_caches[d_name]
+                        previous_dlayer = layers.dropout_backward(
+                            previous_dlayer, d_cache)
 
                 previous_layer -= 1
 
