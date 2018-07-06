@@ -470,9 +470,9 @@ def conv_forward_naive(x, w, b, conv_param):
       - 'pad': The number of pixels that will be used to zero-pad the input.
 
 
-    During padding, 'pad' zeros should be placed symmetrically (i.e equally on both sides)
-    along the height and width axes of the input. Be careful not to modfiy the original
-    input x directly.
+    During padding, 'pad' zeros should be placed symmetrically (i.e equally on both
+    sides) along the height and width axes of the input. Be careful not to modfiy
+    the original input x directly.
 
     Returns a tuple of:
     - out: Output data, of shape (N, F, H', W') where H' and W' are given by
@@ -485,10 +485,38 @@ def conv_forward_naive(x, w, b, conv_param):
     # TODO: Implement the convolutional forward pass.                         #
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    N, C, H, W = x.shape
+    F, CC, HH, WW = w.shape
+
+    stride = conv_param['stride']
+    pad = conv_param['pad']
+
+    H_out = 1 + (H + 2 * pad - HH) / stride
+    W_out = 1 + (W + 2 * pad - WW) / stride
+
+    out = np.zeros((N, F, H_out, W_out))
+
+    x_padded = np.pad(x, ((0, 0), (0, 0),
+                     (pad, pad), (pad, pad)),
+                      mode='constant')
+    # Overwrite height and width with the padded input
+    _, _, H, W = x_padded.shape
+
+    for i in range(N):
+        x_sample = x_padded[i]
+        col_idx = row_idx = -1
+        for c in range(0, H-HH+1, stride):
+            col_idx += 1
+            for r in range(0, W-WW+1, stride):
+                row_idx += 1
+                x_region = x_sample[:, c:c+HH, r:r+WW]
+
+                for f in range(F):
+                    conv = np.sum(x_region * w[f]) + b[f]
+                    out[i, f, col_idx, row_idx] = conv
+
+            row_idx = -1
+
     cache = (x, w, b, conv_param)
     return out, cache
 
@@ -510,7 +538,37 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
-    pass
+    X, W, b, conv_param = cache
+    stride = conv_param['stride']
+    pad = conv_param['pad']
+
+    _,_, h_prev, w_prev = X.shape
+    F, C, HH, WW = W.shape
+
+    dx = np.zeros(X.shape)
+    dw = np.zeros(W.shape)
+    db = np.zeros(b.shape)
+
+    x_padded = np.pad(X, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+
+    H_out = 1 + (h_prev + 2 * pad - HH) / stride
+    W_out = 1 + (w_prev + 2 * pad - WW) / stride
+
+    F, CC, HH, WW = W.shape
+
+    for i in range(F):
+        db[i] = np.sum(dout[:, i, :, :])
+
+    for i in range(0, F):
+        for j in range(0, C):
+            for k in range(0, HH):
+                for l in range(0, WW):
+                    # For dout, the filter size is along the second dimension
+                    dw[i, j, k, l] = np.sum(dout[:, i, :, :] * \
+                                            x_padded[:, j, k:k + H_out * stride:stride,
+                                                     l:l + W_out * stride:stride])
+
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
