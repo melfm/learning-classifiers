@@ -416,7 +416,7 @@ def dropout_forward(x, dropout_param):
         # Store the dropout mask in the mask variable.                        #
         #######################################################################
         mask = (np.random.rand(*x.shape) < p) / p
-        out = x * mask # drop!
+        out = x * mask  # drop!
 
     elif mode == 'test':
         #######################################################################
@@ -497,7 +497,7 @@ def conv_forward_naive(x, w, b, conv_param):
     out = np.zeros((N, F, H_out, W_out))
 
     x_padded = np.pad(x, ((0, 0), (0, 0),
-                     (pad, pad), (pad, pad)),
+                          (pad, pad), (pad, pad)),
                       mode='constant')
     # Overwrite height and width with the padded input
     _, _, H, W = x_padded.shape
@@ -520,7 +520,7 @@ def conv_forward_naive(x, w, b, conv_param):
     cache = (x, w, b, conv_param)
     return out, cache
 
-
+import pdb
 def conv_backward_naive(dout, cache):
     """
     A naive implementation of the backward pass for a convolutional layer.
@@ -542,17 +542,18 @@ def conv_backward_naive(dout, cache):
     stride = conv_param['stride']
     pad = conv_param['pad']
 
-    N,_, h_prev, w_prev = X.shape
+    N, _, h_prev, w_prev = X.shape
     F, C, HH, WW = W.shape
 
     dx = np.zeros(X.shape)
     dw = np.zeros(W.shape)
     db = np.zeros(b.shape)
 
-    x_padded = np.pad(X, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
-    dout_padded = np.pad(dout, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+    x_padded = np.pad(X, ((0, 0), (0, 0),
+                          (pad, pad), (pad, pad)),
+                      mode='constant')
 
-    dx_pad = np.zeros_like(x_padded)
+    dx_padded = np.zeros_like(x_padded)
 
     H_out = 1 + (h_prev + 2 * pad - HH) / stride
     W_out = 1 + (w_prev + 2 * pad - WW) / stride
@@ -562,32 +563,31 @@ def conv_backward_naive(dout, cache):
     for i in range(F):
         db[i] = np.sum(dout[:, i, :, :])
 
-    for i in range(0, F):
-        for j in range(0, C):
+    for f in range(0, F):
+        # The channel is only along the input x
+        for c in range(0, C):
             for k in range(0, HH):
                 for l in range(0, WW):
                     # For dout, the filter size is along the second dimension
-                    dw[i, j, k, l] = np.sum(dout[:, i, :, :] * \
-                                            x_padded[:, j, k:k + H_out * stride:stride,
-                                                     l:l + W_out * stride:stride])
-
-
+                    x_region = x_padded[:, c,
+                                        k:k + H_out * stride:stride,
+                                        l:l + W_out * stride:stride]
+                    dw[f, c, k, l] = \
+                        np.sum(dout[:, f, :, :] * x_region)
 
     for n in range(N):
-        for i in range(int(H_out)):
-            for j in range(int(W_out)):
-                #pdb.set_trace()
-                dout_dim_extend = (dout[n, :, i, j])[:, np.newaxis, np.newaxis, np.newaxis]
-                dx_pad[n, :, i*stride:i*stride+HH, j*stride:j*stride+WW] += \
+        for h in range(int(H_out)):
+            for w in range(int(W_out)):
+                dout_dim_extend = \
+                    dout[n, :, h, w][:, np.newaxis, np.newaxis, np.newaxis]
+                dx_padded[n, :,
+                       h * stride:h * stride + HH,
+                       w * stride:w * stride + WW] += \
                     np.sum((W[:, :, :, :] * dout_dim_extend), axis=0)
 
+    # Remove the padding
+    dx = dx_padded[:, :, pad:-pad, pad:-pad]
 
-    dx = dx_pad[:,:,pad:-pad,pad:-pad]
-
-
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
     return dx, dw, db
 
 
