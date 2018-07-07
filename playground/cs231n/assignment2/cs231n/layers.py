@@ -542,7 +542,7 @@ def conv_backward_naive(dout, cache):
     stride = conv_param['stride']
     pad = conv_param['pad']
 
-    _,_, h_prev, w_prev = X.shape
+    N,_, h_prev, w_prev = X.shape
     F, C, HH, WW = W.shape
 
     dx = np.zeros(X.shape)
@@ -550,6 +550,9 @@ def conv_backward_naive(dout, cache):
     db = np.zeros(b.shape)
 
     x_padded = np.pad(X, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+    dout_padded = np.pad(dout, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+
+    dx_pad = np.zeros_like(x_padded)
 
     H_out = 1 + (h_prev + 2 * pad - HH) / stride
     W_out = 1 + (w_prev + 2 * pad - WW) / stride
@@ -567,6 +570,19 @@ def conv_backward_naive(dout, cache):
                     dw[i, j, k, l] = np.sum(dout[:, i, :, :] * \
                                             x_padded[:, j, k:k + H_out * stride:stride,
                                                      l:l + W_out * stride:stride])
+
+
+
+    for n in range(N):
+        for i in range(int(H_out)):
+            for j in range(int(W_out)):
+                #pdb.set_trace()
+                dout_dim_extend = (dout[n, :, i, j])[:, np.newaxis, np.newaxis, np.newaxis]
+                dx_pad[n, :, i*stride:i*stride+HH, j*stride:j*stride+WW] += \
+                    np.sum((W[:, :, :, :] * dout_dim_extend), axis=0)
+
+
+    dx = dx_pad[:,:,pad:-pad,pad:-pad]
 
 
     ###########################################################################
