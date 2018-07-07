@@ -614,10 +614,33 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # TODO: Implement the max-pooling forward pass                            #
     ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    N, C, H, W = x.shape
+
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    stride = pool_param['stride']
+
+    H_out = 1 + (H - pool_height) / stride
+    W_out = 1 + (W - pool_width) / stride
+
+    out = np.zeros((N, C, H_out, W_out))
+
+    H_out = int(H_out)
+    W_out = int(W_out)
+
+    for n in range(N):
+        for c in range(C):
+            col_idx = row_idx = -1
+            for h in range(0, H-H_out+1, stride):
+                col_idx += 1
+                for w in range(0, W-W_out+1, stride):
+                    row_idx += 1
+                    x_region = x[n,c, h:h+H_out, w:w+W_out]
+                    out[n, c, col_idx, row_idx] = np.max(x_region)
+
+                row_idx = -1
+            col_idx = -1
+
     cache = (x, pool_param)
     return out, cache
 
@@ -637,7 +660,41 @@ def max_pool_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the max-pooling backward pass                           #
     ###########################################################################
-    pass
+    x, pool_param = cache
+    N, C, H, W = x.shape
+
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    stride = pool_param['stride']
+
+    H_out = 1 + (H - pool_height) / stride
+    W_out = 1 + (W - pool_width) / stride
+
+    dx = np.zeros_like(x)
+
+    H_out = int(H_out)
+    W_out = int(W_out)
+
+    for n in range(N):
+        for c in range(C):
+            col_idx = row_idx = -1
+            for h in range(0, H-H_out+1, stride):
+                col_idx += 1
+                for w in range(0, W-W_out+1, stride):
+                    row_idx += 1
+                    x_region = x[n,c, h:h+H_out, w:w+W_out]
+                    max_val = np.max(x_region)
+                    index = np.where(x_region == max_val)
+                    # Zero-out everything, we will fill the max index
+                    # with the corresponding gradient.
+                    x_region = x_region * 0
+                    xx = index[0][0]
+                    yy = index[1][0]
+                    x_region[xx, yy] = dout[n, c, col_idx, row_idx]
+                    dx[n,c, h:h+H_out, w:w+W_out] += x_region
+                row_idx = -1
+            col_idx = -1
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
