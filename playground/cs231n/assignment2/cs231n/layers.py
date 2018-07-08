@@ -681,12 +681,11 @@ def max_pool_backward_naive(dout, cache):
             # (N, C), and this is along axis 2 and 3.
             max_vals = np.max(x_region, axis=(2, 3))
             mask = max_vals[:, :, np.newaxis, np.newaxis] == x_region
-            dx[:, :, h * stride: h * stride + pool_height, w * stride: w * stride + pool_width] +=\
+            dx[:, :,
+               h * stride: h * stride + pool_height,
+               w * stride: w * stride + pool_width] +=\
                 mask * dout[:, :, h, w][:, :, np.newaxis, np.newaxis]
 
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
     return dx
 
 
@@ -721,10 +720,10 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     # vanilla version of batch normalization you implemented above.           #
     # Your implementation should be very short; ours is less than five lines. #
     ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    N, C, H, W = x.shape
+    x_reshaped = x.reshape(-1, C)
+    x_bnorm, cache = batchnorm_forward(x_reshaped, gamma, beta, bn_param)
+    out = x_bnorm.reshape(N, C, H, W)
 
     return out, cache
 
@@ -751,10 +750,10 @@ def spatial_batchnorm_backward(dout, cache):
     # vanilla version of batch normalization you implemented above.           #
     # Your implementation should be very short; ours is less than five lines. #
     ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    N, C, H, W = dout.shape
+    dout_reshaped = dout.reshape(-1, C)
+    dx, dgamma, dbeta = batchnorm_backward(dout_reshaped, cache)
+    dx = dx.reshape(N, C, H, W)
 
     return dx, dgamma, dbeta
 
