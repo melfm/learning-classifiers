@@ -520,7 +520,7 @@ def conv_forward_naive(x, w, b, conv_param):
     cache = (x, w, b, conv_param)
     return out, cache
 
-import pdb
+
 def conv_backward_naive(dout, cache):
     """
     A naive implementation of the backward pass for a convolutional layer.
@@ -628,18 +628,14 @@ def max_pool_forward_naive(x, pool_param):
     H_out = int(H_out)
     W_out = int(W_out)
 
-    for n in range(N):
-        for c in range(C):
-            col_idx = row_idx = -1
-            for h in range(0, H-H_out+1, stride):
-                col_idx += 1
-                for w in range(0, W-W_out+1, stride):
-                    row_idx += 1
-                    x_region = x[n,c, h:h+H_out, w:w+W_out]
-                    out[n, c, col_idx, row_idx] = np.max(x_region)
-
-                row_idx = -1
-            col_idx = -1
+    for h in range(H_out):
+        for w in range(W_out):
+            x_region = x[:, :,
+                         h * stride: h * stride + pool_height,
+                         w * stride: w * stride + pool_width]
+            # Take axis along N and C dimension of x. So we want max of shape
+            # (N, C) and this is along axis 2 and 3.
+            out[:, :, h, w] = np.max(x_region, axis=(2, 3))
 
     cache = (x, pool_param)
     return out, cache
@@ -675,25 +671,18 @@ def max_pool_backward_naive(dout, cache):
     H_out = int(H_out)
     W_out = int(W_out)
 
-    for n in range(N):
-        for c in range(C):
-            col_idx = row_idx = -1
-            for h in range(0, H-H_out+1, stride):
-                col_idx += 1
-                for w in range(0, W-W_out+1, stride):
-                    row_idx += 1
-                    x_region = x[n,c, h:h+H_out, w:w+W_out]
-                    max_val = np.max(x_region)
-                    index = np.where(x_region == max_val)
-                    # Zero-out everything, we will fill the max index
-                    # with the corresponding gradient.
-                    x_region = x_region * 0
-                    xx = index[0][0]
-                    yy = index[1][0]
-                    x_region[xx, yy] = dout[n, c, col_idx, row_idx]
-                    dx[n,c, h:h+H_out, w:w+W_out] += x_region
-                row_idx = -1
-            col_idx = -1
+    for h in range(H_out):
+        for w in range(W_out):
+            # Here we repeat the max-pooling, to access the original index
+            x_region = x[:, :,
+                         h * stride: h * stride + pool_height,
+                         w * stride: w * stride + pool_width]
+            # Take axis along N and C dimension of x. So we want max of shape
+            # (N, C), and this is along axis 2 and 3.
+            max_vals = np.max(x_region, axis=(2, 3))
+            mask = max_vals[:, :, np.newaxis, np.newaxis] == x_region
+            dx[:, :, h * stride: h * stride + pool_height, w * stride: w * stride + pool_width] +=\
+                mask * dout[:, :, h, w][:, :, np.newaxis, np.newaxis]
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
