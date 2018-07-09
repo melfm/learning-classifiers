@@ -763,7 +763,8 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     Computes the forward pass for spatial group normalization.
     In contrast to layer normalization, group normalization splits each entry
     in the data into G contiguous pieces, which it then normalizes independently.
-    Per feature shifting and scaling are then applied to the data, in a manner identical to that of batch normalization and layer normalization.
+    Per feature shifting and scaling are then applied to the data, in a manner
+    identical to that of batch normalization and layer normalization.
 
     Inputs:
     - x: Input data of shape (N, C, H, W)
@@ -786,10 +787,18 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     # the bulk of the code is similar to both train-time batch normalization  #
     # and layer normalization!                                                #
     ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    N, C, H, W = x.shape
+    x = x.reshape(N, G, C // G, H, W)
+    sample_mean = np.mean(x, axis=(2,3,4))
+    sample_var = np.var(x, axis=(2,3,4))
+
+    vareps = sample_var + eps
+    x_normalized = (x.T - sample_mean) / np.sqrt(vareps)
+    x = x_normalized.reshape(N, C, H, W)
+    out = x * gamma + beta
+
+    cache = (x, gamma, sample_mean, vareps, x_normalized, G)
+
     return out, cache
 
 
@@ -812,10 +821,41 @@ def spatial_groupnorm_backward(dout, cache):
     # TODO: Implement the backward pass for spatial group normalization.      #
     # This will be extremely similar to the layer norm implementation.        #
     ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    x = cache[0]
+    N, C, H, W = x.shape
+    gamma = cache[1]
+    sample_mean = cache[2]
+    vareps = cache[3]
+    x_normalized = cache[4]
+    G = cache[5]
+    D = C*H*W
+
+    x = x.reshape(N, G, C // G, H, W)
+
+    x_mu = x.T - sample_mean
+    dx_norm = dout * gamma
+    dx_norm = dx_norm.reshape(N, G, C // G, H, W)
+
+    dout_r = dout.reshape(N, G, C // G, H, W)
+    dbeta = np.sum(dout_r, axis=(0,3,4))
+    dbeta = dbeta.reshape(1, C, 1, 1)
+
+    x_normalized = x_normalized.reshape(N, C, H, W)
+    dgamma = np.sum(dout * x_normalized, axis=(0, 2, 3))
+    dgamma = dgamma.reshape(1, C, 1, 1)
+
+
+    std_inv = 1/np.sqrt(vareps)
+
+    dvar = np.sum(dx_norm * x_mu.T, axis=(2,3,4)) * -.5 * np.power(vareps, -3/2)
+
+    dmu = np.sum(dx_norm.T * -std_inv,
+                 axis=(0,1,2)) + dvar * np.mean(-2. * x_mu.T, axis=(2,3,4))
+
+    dx = (dx_norm.T * std_inv) + (dvar * 2 * x_mu / D) + (dmu / D)
+
+    dx = dx.reshape(N, C, H, W)
+
     return dx, dgamma, dbeta
 
 
