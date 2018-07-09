@@ -371,9 +371,9 @@ class FullyConnectedNet(object):
                 hidden_layer_1 = np.maximum(0, np.dot(X, W1) + b1)
                 if self.use_dropout:
                     d_param = self.dropout_param
-                    hidden_layer_1, cache = layers.dropout_forward(
-                                                                   hidden_layer_1,
-                                                                   d_param)
+                    hidden_layer_1, cache = \
+                        layers.dropout_forward(hidden_layer_1,
+                                               d_param)
                     dropout_caches['d_cache1'] = cache
 
                 # Used for regularization
@@ -400,7 +400,6 @@ class FullyConnectedNet(object):
 
                     hidden_layers['hl_1'] = h_bnorm
                     bn_caches['b_cache1'] = cache_h
-
 
                 else:
                     hidden_layers['hl_1'] = hidden_layer_1
