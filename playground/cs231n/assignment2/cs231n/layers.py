@@ -828,9 +828,7 @@ def spatial_groupnorm_backward(dout, cache):
     x_normalized = cache[4]
     G = cache[5]
     D = (C//G)*H*W
-    print('D', D)
     x = x.reshape(N, G, C // G, H, W)
-
 
     dout_r = dout.reshape(N, G, C // G, H, W)
     dbeta = np.sum(dout_r, axis=(0,3,4))
@@ -840,6 +838,7 @@ def spatial_groupnorm_backward(dout, cache):
     dgamma = np.sum(dout * x_normalized, axis=(0, 2, 3))
     dgamma = dgamma.reshape(1, C, 1, 1)
 
+    # TODO: Fix dx?
 
     x_mu = x - sample_mean
     dx_norm = dout * gamma
