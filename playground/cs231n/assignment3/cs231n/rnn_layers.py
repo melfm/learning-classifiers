@@ -8,7 +8,6 @@ This file defines layer types that are commonly used for recurrent neural
 networks.
 """
 
-
 def rnn_step_forward(x, prev_h, Wx, Wh, b):
     """
     Run the forward pass for a single timestep of a vanilla RNN that uses a tanh
@@ -29,15 +28,20 @@ def rnn_step_forward(x, prev_h, Wx, Wh, b):
     - cache: Tuple of values needed for the backward pass.
     """
     next_h, cache = None, None
-    ##############################################################################
-    # TODO: Implement a single forward step for the vanilla RNN. Store the next  #
-    # hidden state and any values you need for the backward pass in the next_h   #
-    # and cache variables respectively.                                          #
-    ##############################################################################
-    pass
-    ##############################################################################
-    #                               END OF YOUR CODE                             #
-    ##############################################################################
+    #############################################################################
+    # Implement a single forward step for the vanilla RNN. Store the next
+    # hidden state and any values you need for the backward pass in the next_h
+    # and cache variables respectively.
+    #############################################################################
+
+    x_prod = np.dot(x, Wx)
+    state_dot = np.dot(prev_h, Wh)
+    state_dot_v2 = np.dot(Wh, prev_h.T)
+    forward_pass = x_prod + state_dot + b
+    next_h = np.tanh(forward_pass)
+
+    cache = (x, prev_h, Wx, Wh, forward_pass)
+
     return next_h, cache
 
 
@@ -57,16 +61,31 @@ def rnn_step_backward(dnext_h, cache):
     - db: Gradients of bias vector, of shape (H,)
     """
     dx, dprev_h, dWx, dWh, db = None, None, None, None, None
+    #############################################################################
+    # Implement the backward pass for a single step of a vanilla RNN.
+    #
+    # HINT: For the tanh function, you can compute the local derivative in terms
+    # of the output value from tanh.
     ##############################################################################
-    # TODO: Implement the backward pass for a single step of a vanilla RNN.      #
-    #                                                                            #
-    # HINT: For the tanh function, you can compute the local derivative in terms #
-    # of the output value from tanh.                                             #
-    ##############################################################################
-    pass
-    ##############################################################################
-    #                               END OF YOUR CODE                             #
-    ##############################################################################
+    x, prev_h, Wx, Wh, forward_pass = cache
+
+    dhtan = (1 - np.tanh(forward_pass)**2) * dnext_h
+
+    dWx = np.dot(x.T, dhtan)
+    dWh = np.dot(prev_h.T, dhtan)
+
+    dprev_h = np.dot(Wh, dhtan.T).T
+
+    db = np.sum(dhtan, axis=0)
+
+    dx = np.dot(dhtan, Wx.T)
+    dx = np.dot(Wx, dhtan.T).T
+
+    assert(x.shape == dx.shape)
+    assert(dWx.shape == Wx.shape)
+    assert(dWh.shape == Wh.shape)
+    assert(dprev_h.shape == prev_h.shape)
+
     return dx, dprev_h, dWx, dWh, db
 
 
@@ -106,9 +125,9 @@ def rnn_backward(dh, cache):
     Compute the backward pass for a vanilla RNN over an entire sequence of data.
 
     Inputs:
-    - dh: Upstream gradients of all hidden states, of shape (N, T, H). 
-    
-    NOTE: 'dh' contains the upstream gradients produced by the 
+    - dh: Upstream gradients of all hidden states, of shape (N, T, H).
+
+    NOTE: 'dh' contains the upstream gradients produced by the
     individual loss functions at each timestep, *not* the gradients
     being passed between timesteps (which you'll have to compute yourself
     by calling rnn_step_backward in a loop).
