@@ -235,7 +235,7 @@ class CaptioningRNN(object):
 
         curr_capt = self._start * np.ones((N, 1), dtype=np.int32)
 
-        for t in range(max_length):
+        for t in range(1, max_length):
             # Step (1)
             embedding_trans, _ = word_embedding_forward(curr_capt, W_embed)
 
@@ -244,7 +244,7 @@ class CaptioningRNN(object):
             next_state, _ = rnn_step_forward(embedding_trans, prev_h,
                                              Wx, Wh, b)
 
-            h0 = next_state
+            prev_h = next_state
             # Step (3)
             temporal_affine_scores, _ = temporal_affine_forward(
                 next_state[:, np.newaxis,:], W_vocab, b_vocab)
@@ -252,8 +252,5 @@ class CaptioningRNN(object):
             scores = np.squeeze(temporal_affine_scores, axis=1)
             max_idx = np.argmax(scores, axis=1)
             captions[:, t] = max_idx
-
-            curr_capt = captions[:, t]
-            curr_capt = curr_capt[:, np.newaxis]
 
         return captions
