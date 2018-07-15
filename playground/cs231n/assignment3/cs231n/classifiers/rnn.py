@@ -5,7 +5,7 @@ import numpy as np
 from cs231n.layers import *
 from cs231n.rnn_layers import *
 
-
+import pdb
 class CaptioningRNN(object):
     """
     A CaptioningRNN produces captions from image features using a recurrent
@@ -24,14 +24,15 @@ class CaptioningRNN(object):
         Construct a new CaptioningRNN instance.
 
         Inputs:
-        - word_to_idx: A dictionary giving the vocabulary. It contains V entries,
-          and maps each string to a unique integer in the range [0, V).
+        - word_to_idx: A dictionary giving the vocabulary. It contains V
+            entries, and maps each string to a unique integer in the range
+            [0, V).
         - input_dim: Dimension D of input image feature vectors.
         - wordvec_dim: Dimension W of word vectors.
         - hidden_dim: Dimension H for the hidden state of the RNN.
         - cell_type: What type of RNN to use; either 'rnn' or 'lstm'.
-        - dtype: numpy datatype to use; use float32 for training and float64 for
-          numeric gradient checking.
+        - dtype: numpy datatype to use; use float32 for training and float64
+            for numeric gradient checking.
         """
         if cell_type not in {'rnn', 'lstm'}:
             raise ValueError('Invalid cell_type "%s"' % cell_type)
@@ -74,36 +75,36 @@ class CaptioningRNN(object):
         for k, v in self.params.items():
             self.params[k] = v.astype(self.dtype)
 
-
     def loss(self, features, captions):
         """
         Compute training-time loss for the RNN. We input image features and
-        ground-truth captions for those images, and use an RNN (or LSTM) to compute
-        loss and gradients on all parameters.
+        ground-truth captions for those images, and use an RNN (or LSTM) to
+        compute loss and gradients on all parameters.
 
         Inputs:
         - features: Input image features, of shape (N, D)
-        - captions: Ground-truth captions; an integer array of shape (N, T) where
-          each element is in the range 0 <= y[i, t] < V
+        - captions: Ground-truth captions; an integer array of shape (N, T)
+            where each element is in the range 0 <= y[i, t] < V
 
         Returns a tuple of:
         - loss: Scalar loss
         - grads: Dictionary of gradients parallel to self.params
         """
-        # Cut captions into two pieces: captions_in has everything but the last word
-        # and will be input to the RNN; captions_out has everything but the first
-        # word and this is what we will expect the RNN to generate. These are offset
-        # by one relative to each other because the RNN should produce word (t+1)
-        # after receiving word t. The first element of captions_in will be the START
-        # token, and the first element of captions_out will be the first word.
+        # Cut captions into two pieces: captions_in has everything but the las
+        # word and will be input to the RNN; captions_out has everything but
+        # the first word and this is what we will expect the RNN to generate.
+        # These are offset by one relative to each other because the RNN should
+        # produce word (t+1) after receiving word t. The first element of
+        # captions_in will be the START token, and the first element of
+        # captions_out will be the first word.
         captions_in = captions[:, :-1]
         captions_out = captions[:, 1:]
 
         # You'll need this
         mask = (captions_out != self._null)
 
-        # Weight and bias for the affine transform from image features to initial
-        # hidden state
+        # Weight and bias for the affine transform from image features to
+        # initial hidden state
         W_proj, b_proj = self.params['W_proj'], self.params['b_proj']
 
         # Word embedding matrix
@@ -116,37 +117,59 @@ class CaptioningRNN(object):
         W_vocab, b_vocab = self.params['W_vocab'], self.params['b_vocab']
 
         loss, grads = 0.0, {}
-        ############################################################################
-        # TODO: Implement the forward and backward passes for the CaptioningRNN.   #
-        # In the forward pass you will need to do the following:                   #
-        # (1) Use an affine transformation to compute the initial hidden state     #
-        #     from the image features. This should produce an array of shape (N, H)#
-        # (2) Use a word embedding layer to transform the words in captions_in     #
-        #     from indices to vectors, giving an array of shape (N, T, W).         #
-        # (3) Use either a vanilla RNN or LSTM (depending on self.cell_type) to    #
-        #     process the sequence of input word vectors and produce hidden state  #
-        #     vectors for all timesteps, producing an array of shape (N, T, H).    #
-        # (4) Use a (temporal) affine transformation to compute scores over the    #
-        #     vocabulary at every timestep using the hidden states, giving an      #
-        #     array of shape (N, T, V).                                            #
-        # (5) Use (temporal) softmax to compute loss using captions_out, ignoring  #
-        #     the points where the output word is <NULL> using the mask above.     #
-        #                                                                          #
-        # In the backward pass you will need to compute the gradient of the loss   #
-        # with respect to all model parameters. Use the loss and grads variables   #
-        # defined above to store loss and gradients; grads[k] should give the      #
-        # gradients for self.params[k].                                            #
-        #                                                                          #
-        # Note also that you are allowed to make use of functions from layers.py   #
-        # in your implementation, if needed.                                       #
-        ############################################################################
-        pass
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
+        #####################################################################
+        # Implement the forward and backward passes for the CaptioningRNN.
+        # In the forward pass you will need to do the following:
+        # (1) Use an affine transformation to compute the initial hidden state
+        #     from the image features. This should produce an array of shape
+        #     (N, H)
+        # (2) Use a word embedding layer to transform the words in captions_in
+        #     from indices to vectors, giving an array of shape (N, T, W).
+        # (3) Use either a vanilla RNN or LSTM (depending on self.cell_type) to
+        #     process the sequence of input word vectors and produce hidden
+        #     state vectors for all timesteps, producing an array of shape
+        #     (N, T, H).
+        # (4) Use a (temporal) affine transformation to compute scores over the
+        #     vocabulary at every timestep using the hidden states, giving an
+        #     array of shape (N, T, V).
+        # (5) Use (temporal) softmax to compute loss using captions_out,
+        #     ignoring the points where the output word is <NULL> using the
+        #     mask above.
+        #
+        # In the backward pass you will need to compute the gradient of the
+        # loss with respect to all model parameters. Use the loss and grads
+        # variables defined above to store loss and gradients; grads[k]
+        # should give the gradients for self.params[k].
+        #
+        # Note also that you are allowed to make use of functions from
+        # layers.py in your implementation, if needed.
+        #######################################################################
+        affine_trans, affine_cache = affine_forward(features, W_proj, b_proj)
+        embedding_trans, embedding_cache = \
+            word_embedding_forward(captions_in, W_embed)
+
+        if self.cell_type == 'rnn':
+            hstate, cache_rnn = rnn_forward(
+                embedding_trans, affine_trans, Wx, Wh, b)
+        else:
+            raise ValueError('Invalid cell type.')
+
+        temp_out, temp_cache = temporal_affine_forward(
+            hstate, W_vocab, b_vocab)
+        loss, dout = temporal_softmax_loss(temp_out, captions_out, mask)
+
+        grads = dict.fromkeys(self.params)
+        dx_temp, grads['W_vocab'], grads['b_vocab'] = \
+            temporal_affine_backward(dout, temp_cache)
+
+        dx_rnn, dh0_rnn, grads['Wx'], grads['Wh'], grads['b'] = \
+            rnn_backward(dx_temp, cache_rnn)
+        grads['W_embed'] = word_embedding_backward(dx_rnn, embedding_cache)
+
+        dx_affine, grads['W_proj'], grads['b_proj'] =\
+            affine_backward(dh0_rnn, affine_cache)
 
         return loss, grads
-
 
     def sample(self, features, max_length=30):
         """
@@ -181,7 +204,7 @@ class CaptioningRNN(object):
         Wx, Wh, b = self.params['Wx'], self.params['Wh'], self.params['b']
         W_vocab, b_vocab = self.params['W_vocab'], self.params['b_vocab']
 
-        ###########################################################################
+        #######################################################################
         # TODO: Implement test-time sampling for the model. You will need to      #
         # initialize the hidden state of the RNN by applying the learned affine   #
         # transform to the input image features. The first word that you feed to  #
@@ -204,9 +227,9 @@ class CaptioningRNN(object):
         #                                                                         #
         # NOTE: we are still working over minibatches in this function. Also if   #
         # you are using an LSTM, initialize the first cell state to zeros.        #
-        ###########################################################################
+        #######################################################################
         pass
-        ############################################################################
+        #######################################################################
         #                             END OF YOUR CODE                             #
-        ############################################################################
+        #######################################################################
         return captions
