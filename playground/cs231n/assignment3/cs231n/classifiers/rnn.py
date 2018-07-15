@@ -5,7 +5,7 @@ import numpy as np
 from cs231n.layers import *
 from cs231n.rnn_layers import *
 
-import pdb
+
 class CaptioningRNN(object):
     """
     A CaptioningRNN produces captions from image features using a recurrent
@@ -228,8 +228,32 @@ class CaptioningRNN(object):
         # NOTE: we are still working over minibatches in this function. Also if   #
         # you are using an LSTM, initialize the first cell state to zeros.        #
         #######################################################################
-        pass
-        #######################################################################
-        #                             END OF YOUR CODE                             #
-        #######################################################################
+        h0, _ = affine_forward(features, W_proj, b_proj)
+        prev_h = h0
+
+        captions[:, 0] = self._start
+
+        curr_capt = self._start * np.ones((N, 1), dtype=np.int32)
+
+        for t in range(max_length):
+            # Step (1)
+            embedding_trans, _ = word_embedding_forward(curr_capt, W_embed)
+
+            # Step (2)
+            embedding_trans = np.squeeze(embedding_trans, axis=1)
+            next_state, _ = rnn_step_forward(embedding_trans, prev_h,
+                                             Wx, Wh, b)
+
+            h0 = next_state
+            # Step (3)
+            temporal_affine_scores, _ = temporal_affine_forward(
+                next_state[:, np.newaxis,:], W_vocab, b_vocab)
+            # Step (4)
+            scores = np.squeeze(temporal_affine_scores, axis=1)
+            max_idx = np.argmax(scores, axis=1)
+            captions[:, t] = max_idx
+
+            curr_capt = captions[:, t]
+            curr_capt = curr_capt[:, np.newaxis]
+
         return captions
