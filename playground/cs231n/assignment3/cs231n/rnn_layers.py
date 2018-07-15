@@ -156,19 +156,43 @@ def rnn_backward(dh, cache):
     # that you defined above. You can use a for loop to help compute the
     # backward pass.
     ####################################################################
+    N, T, H = dh.shape
+    D = cache[0][0].shape[1]
+
+    dx = np.zeros((N, T, D))
+    dh0 = np.zeros((N, H))
+    dWx = np.zeros((D, H))
+    dWh = np.zeros((H, H))
+    db = np.zeros((H))
+
+    # Initialize this to zero
+    dprev_h = np.zeros((N, H))
+    for t in reversed(range(T)):
+
+        cache_t = cache[t]
+        dnext_h = dh[:, t, :]
+        dh_current = dnext_h + dprev_h
+
+        dx_t, dprev_h, dWx_t, dWh_t, db_t = rnn_step_backward(dh_current,
+                                                              cache_t)
+        dh0 = dprev_h
+        dx[:, t, :] += dx_t
+        dWx += dWx_t
+        dWh += dWh_t
+        db += db_t
 
     return dx, dh0, dWx, dWh, db
 
 
 def word_embedding_forward(x, W):
     """
-    Forward pass for word embeddings. We operate on minibatches of size N where
-    each sequence has length T. We assume a vocabulary of V words, assigning each
-    word to a vector of dimension D.
+    Forward pass for word embeddings. We operate on minibatches of size N
+    where each sequence has length T. We assume a vocabulary of V words,
+    assigning each word to a vector of dimension D.
 
     Inputs:
     - x: Integer array of shape (N, T) giving indices of words. Each element idx
-      of x muxt be in the range 0 <= idx < V.
+      of x must be in the range 0 <= idx < V.
     - W: Weight matrix of shape (V, D) giving word vectors for all words.
 
     Returns a tuple of:
@@ -177,14 +201,14 @@ def word_embedding_forward(x, W):
     """
     out, cache = None, None
     ##########################################################################
-    # TODO: Implement the forward pass for word embeddings.                      #
-    #                                                                            #
-    # HINT: This can be done in one line using NumPy's array indexing.           #
+    # Implement the forward pass for word embeddings.
+    #
+    # HINT: This can be done in one line using NumPy's array indexing.
     ##########################################################################
-    pass
-    ##########################################################################
-    #                               END OF YOUR CODE                             #
-    ##########################################################################
+
+    out = W[x, :]
+    cache = x, W
+
     return out, cache
 
 
@@ -205,15 +229,15 @@ def word_embedding_backward(dout, cache):
     """
     dW = None
     ##########################################################################
-    # TODO: Implement the backward pass for word embeddings.                     #
-    #                                                                            #
-    # Note that words can appear more than once in a sequence.                   #
-    # HINT: Look up the function np.add.at                                       #
+    # Implement the backward pass for word embeddings.
+    #
+    # Note that words can appear more than once in a sequence.
+    # HINT: Look up the function np.add.at
     ##########################################################################
-    pass
-    ##########################################################################
-    #                               END OF YOUR CODE                             #
-    ##########################################################################
+    x, W = cache
+    dW = np.zeros_like(W)
+    np.add.at(dW, x, dout)
+
     return dW
 
 
