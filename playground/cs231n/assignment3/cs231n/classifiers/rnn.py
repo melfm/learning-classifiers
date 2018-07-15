@@ -247,10 +247,12 @@ class CaptioningRNN(object):
             prev_h = next_state
             # Step (3)
             temporal_affine_scores, _ = temporal_affine_forward(
-                next_state[:, np.newaxis,:], W_vocab, b_vocab)
+                next_state[:, np.newaxis, :], W_vocab, b_vocab)
             # Step (4)
             scores = np.squeeze(temporal_affine_scores, axis=1)
             max_idx = np.argmax(scores, axis=1)
             captions[:, t] = max_idx
+
+            # TODO: Stop generating after sampling <END> token
 
         return captions
