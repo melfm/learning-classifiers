@@ -28,6 +28,6 @@ The name of the pickle file corresponds to the name of the gym environment.
 
 **Mel Note**: The current version of the code, as far as I know, only works with `Python3.6`.You also need the followings in your `bashrc` in order to run the code:
 ```
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/home/melissa/.mujoco/mjpro150/bin:/usr/lib/nvidia-384:/usr/local/cuda-8.0/lib64"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/.mujoco/mjpro150/bin:/usr/lib/nvidia-384:/usr/local/cuda-8.0/lib64"
 export LD_PRELOAD="/usr/lib/x86_64-linux-gnu/libGLEW.so"
 ```
