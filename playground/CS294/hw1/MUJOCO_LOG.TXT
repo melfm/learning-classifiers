@@ -1,0 +1,45 @@
+Thu Aug 23 15:33:09 2018
+ERROR: GLEW initalization error: Missing GL version
+
+Thu Aug 23 15:39:57 2018
+ERROR: GLEW initalization error: Missing GL version
+
+Thu Aug 23 15:46:25 2018
+ERROR: Offscreen framebuffer is not complete, error 0x8cdd
+
+Thu Aug 23 15:50:39 2018
+ERROR: GLEW initalization error: Missing GL version
+
+Thu Aug 23 15:53:22 2018
+ERROR: Default framebuffer is not complete, error 0x0
+
+Thu Aug 23 15:58:19 2018
+ERROR: Shadow framebuffer is not complete, error 0x8cd7
+
+Thu Aug 23 16:00:38 2018
+ERROR: Shadow framebuffer is not complete, error 0x8cd7
+
+Thu Aug 23 16:04:00 2018
+ERROR: Shadow framebuffer is not complete, error 0x8cd7
+
+Thu Aug 23 17:08:06 2018
+ERROR: GLEW initalization error: Missing GL version
+
+Thu Aug 23 21:17:46 2018
+ERROR: GLEW initalization error: Missing GL version
+
+Thu Aug 23 21:37:00 2018
+ERROR: GLEW initalization error: Missing GL version
+
+Thu Aug 23 21:38:18 2018
+ERROR: GLEW initalization error: Missing GL version
+
+Thu Aug 23 21:38:58 2018
+ERROR: GLEW initalization error: Missing GL version
+
+Thu Aug 23 21:45:54 2018
+ERROR: GLEW initalization error: Missing GL version
+
+Tue Aug 28 10:56:49 2018
+ERROR: GLEW initalization error: Missing GL version
+
