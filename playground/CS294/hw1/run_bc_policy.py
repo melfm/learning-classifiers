@@ -2,7 +2,7 @@
 
 """Load an expert policy and generate roll-out data for behavioral cloning.
 Example usage:
-    python run_bc_policy.py Humanoid-v2 --render --num_rollouts 20
+    python3.6 run_bc_policy.py --envname Humanoid-v2 --render --num_rollouts 20
 """
 import argparse
 import pickle
@@ -12,12 +12,15 @@ import tf_util
 import gym
 
 import bc_policy as bc
+import network_params as par
 
-n_h1 = 100
-n_h2 = 100
-n_h3 = 100
-
-batch_size = 20
+#############################
+# Network parameters
+#############################
+n_h1 = par.n_h1
+n_h2 = par.n_h2
+n_h3 = par.n_h3
+batch_size = par.batch_size
 
 
 def main():
@@ -56,7 +59,7 @@ def main():
         observations = []
         actions = []
         for i in range(args.num_rollouts):
-            print('Iteration ', i)
+            print('Rollout iteration ', i)
             obs = env.reset()
             done = False
             total_reward = 0
@@ -66,8 +69,7 @@ def main():
                                                    feed_dict={x: obs[None, :]})
                 observations.append(obs)
                 actions.append(action)
-                obs, r, done, info = env.step(action[0])
-                # print('Info ', info)
+                obs, r, done, _ = env.step(action[0])
                 total_reward += r
                 steps += 1
                 if args.render:
@@ -81,9 +83,6 @@ def main():
         print('returns', returns)
         print('mean return', np.mean(returns))
         print('std of return', np.std(returns))
-
-       #  expert_data = {'observations': np.array(observations),
-       #                'actions': np.array(actions)}
 
 
 if __name__ == '__main__':

@@ -2,9 +2,6 @@
 
 import numpy as np
 import tensorflow as tf
-import pickle
-
-import tf_util
 
 
 def weight_variable(shape):
@@ -20,13 +17,10 @@ def bias_variable(shape):
     return tf.Variable(initial)
 
 
-def nn_layer(input_tensor, input_dim, output_dim, layer_name, act=tf.tanh):
-    """Reusable code for making a simple neural net layer.
-    It does a matrix multiply, bias add, and then uses tanh to nonlinearize.
-    It also sets up name scoping so that the resultant graph is easy to read,
-    and adds a number of summary ops.
+def nn_layer(input_tensor, input_dim, output_dim, layer_name, act=tf.nn.relu):
+    """Make a simple neural net layer.
     """
-    # Adding a name scope ensures logical grouping of the layers in the graph.
+    # Adding a name scope to group layers in the graph.
     with tf.name_scope(layer_name):
         # This Variable will hold the state of the weights for the layer
         with tf.name_scope('weights'):
@@ -78,14 +72,6 @@ def inference(x, nin, nout, n_h1, n_h2, n_h3):
             b = bias_variable([nout])
     out = tf.matmul(layer3, W) + b
 
-    # TODO Add dropout and batchnorm
-    # with tf.name_scope('dropout'):
-    #    #keep_prob = tf.placeholder(tf.float32)
-    #    keep_prob = 0.8
-    #    tf.summary.scalar('dropout_keep_probability', keep_prob)
-    #    dropped = tf.nn.dropout(out, keep_prob)
-    # Do not apply softmax activation yet, see below.
-    #y = nn_layer(dropped, nout, nout, 'output',tf.identity)
     return out
 
 

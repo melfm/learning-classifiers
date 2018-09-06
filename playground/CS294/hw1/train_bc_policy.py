@@ -11,11 +11,12 @@ import pickle
 
 import bc_policy as bc
 
-n_h1 = 100
-n_h2 = 100
-n_h3 = 100
+import network_params as par
 
-batch_size = 20
+n_h1 = par.n_h1
+n_h2 = par.n_h2
+n_h3 = par.n_h3
+batch_size = par.batch_size
 
 
 def train_network(args):
