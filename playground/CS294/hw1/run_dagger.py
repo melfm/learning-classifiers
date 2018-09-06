@@ -9,6 +9,7 @@ import pickle
 import tensorflow as tf
 import numpy as np
 import gym
+import os
 
 import load_policy
 import tf_util
@@ -171,7 +172,10 @@ def main():
         'stds': total_std,
         'train_size': total_train_size}
 
-    with open('DAgger_results.pkl', 'wb') as fp:
+    results_dir = 'results'
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+    with open('results/' + args.envname + '_DAgger_results.pkl', 'wb') as fp:
         pickle.dump(dagger_results, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
     print('means ', total_mean)

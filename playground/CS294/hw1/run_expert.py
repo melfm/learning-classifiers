@@ -8,6 +8,7 @@ Example usage:
 Author of this script and included expert policies: Jonathan Ho (hoj@openai.com)
 """
 
+import argparse
 import os
 import pickle
 import tensorflow as tf
@@ -18,7 +19,6 @@ import load_policy
 
 
 def main():
-    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('expert_policy_file', type=str)
     parser.add_argument('envname', type=str)
@@ -74,6 +74,13 @@ def main():
             os.makedirs(rollout_dir)
         with open('rollouts/' + args.envname + '.pkl', 'wb') as f:
             pickle.dump(expert_data, f, pickle.HIGHEST_PROTOCOL)
+
+        results_dir = 'results'
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir)
+        with open('results/' + args.envname +
+                  '_expert_returns.pkl', 'wb') as f:
+            pickle.dump(returns, f, pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == '__main__':
