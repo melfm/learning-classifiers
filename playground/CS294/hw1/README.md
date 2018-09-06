@@ -31,3 +31,42 @@ The name of the pickle file corresponds to the name of the gym environment.
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/.mujoco/mjpro150/bin:/usr/lib/nvidia-384:/usr/local/cuda-8.0/lib64"
 export LD_PRELOAD="/usr/lib/x86_64-linux-gnu/libGLEW.so"
 ```
+
+## Behavioral Cloning Experiments
+
+### Steps
+1. Generate expert roll-outs
+```
+python3.6 run_expert.py experts/Humanoid-v2.pkl Humanoid-v2 --render --num_rollouts 20
+```
+
+2. Train behavioral cloning policy
+```
+python3.6 train_bc_policy.py Humanoid-v2 --num_epochs 200
+```
+
+3. Run behavioral cloning policy
+```
+python3.6 run_bc_policy.py --envname Humanoid-v2 --render --num_rollouts 20
+```
+
+## DAgger Experiments
+
+Some notes about the experiment result data.
+
+- Returns: This is the total rewrad. The scale varies between tasks but overall the goal is to increase this value.
+This is visualized as a list of rewards for each trajectory rollout.
+- Std: Shows the amount of variation between each rollout reward.
+A low standard deviation indicates that the data points tend to be close to the mean of the set, while a high standarddeviation indicates that the data points are spread out over a wider range of values.
+
+### Steps
+These steps assume the expert rollsouts have already been generated.
+1. Run DAgger
+```
+python3.6 run_dagger.py --envname Humanoid-v2 --render --num_rollouts 20
+```
+
+2. Visualize results
+```
+python plot_dagger_results.py
+```

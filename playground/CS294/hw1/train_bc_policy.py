@@ -10,7 +10,6 @@ import tensorflow as tf
 import pickle
 
 import bc_policy as bc
-
 import network_params as par
 
 n_h1 = par.n_h1
@@ -43,15 +42,21 @@ def train_network(args):
     init = tf.global_variables_initializer()
 
     sess = tf.Session()
-    sess.run(init)
 
+    merged = tf.summary.merge_all()
+    train_writer = tf.summary.FileWriter('trainedNN/' + args.name +
+                                         '/train_summary', sess.graph)
+
+    sess.run(init)
     for epoch in range(args.num_epochs):
         total_loss = 0
         for i in range(total_batch):
             feed_dict = bc.fill_feed_dict(
                 x, y, data, i, output_size, batch_size)
-            _, train_loss = sess.run([train_op, loss], feed_dict=feed_dict)
+            _, train_loss, summary = sess.run([train_op, loss, merged],
+                                              feed_dict=feed_dict)
             total_loss += train_loss / total_batch
+            train_writer.add_summary(summary, i)
 
         if epoch % 10 == 0:
             print(
@@ -61,7 +66,7 @@ def train_network(args):
                 "loss= ",
                 "{:.9f}".format(total_loss))
 
-    saver.save(sess, "trainedNN/" + args.name)
+    saver.save(sess, 'trainedNN/' + args.name)
     sess.close()
 
 
