@@ -70,3 +70,7 @@ python3.6 run_dagger.py --envname Humanoid-v2 --render --num_rollouts 20
 ```
 python plot_dagger_results.py
 ```
+
+## TODO
+- Add experiment results
+- Try adding Dropout and BatchNorm

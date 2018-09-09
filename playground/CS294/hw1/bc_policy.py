@@ -39,6 +39,7 @@ def nn_layer(input_tensor, input_dim, output_dim, layer_name, act=tf.nn.relu):
 
 def l2loss(pred, target):
     square_diff = tf.nn.l2_loss(pred - target)
+    tf.summary.scalar('L2_loss', square_diff)
     return square_diff
 
 

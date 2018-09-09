@@ -34,7 +34,7 @@ def main():
     parser.add_argument('--learning_rate', type=float,
                         default=1e-4)
     parser.add_argument('--num_rollouts', type=int, default=20)
-    parser.add_argument('--dagger_iter', type=int, default=10)
+    parser.add_argument('--dagger_iter', type=int, default=15)
     args = parser.parse_args()
 
     expert_policy_file = 'experts/Humanoid-v2.pkl'

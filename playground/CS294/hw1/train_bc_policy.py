@@ -1,8 +1,7 @@
 """ This trains the Feedforward neural network using the generated rollouts.
 
 Example usage:
-    python3.6 train_bc_policy.py Humanoid-v2 --num_epochs 200
-
+    python3.6 train_bc_policy.py Humanoid-v2 --num_epochs 500
 """
 
 import argparse
@@ -66,7 +65,7 @@ def train_network(args):
                 "loss= ",
                 "{:.9f}".format(total_loss))
 
-    saver.save(sess, 'trainedNN/' + args.name)
+        saver.save(sess, 'trainedNN/' + args.name)
     sess.close()
 
 
