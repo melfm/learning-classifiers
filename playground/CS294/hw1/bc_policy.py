@@ -17,7 +17,7 @@ def bias_variable(shape):
     return tf.Variable(initial)
 
 
-def nn_layer(input_tensor, input_dim, output_dim, layer_name, act=tf.nn.relu):
+def nn_layer(input_tensor, input_dim, output_dim, layer_name, act=tf.tanh):
     """Make a simple neural net layer.
     """
     # Adding a name scope to group layers in the graph.
