@@ -581,8 +581,8 @@ def conv_backward_naive(dout, cache):
                 dout_dim_extend = \
                     dout[n, :, h, w][:, np.newaxis, np.newaxis, np.newaxis]
                 dx_padded[n, :,
-                       h * stride:h * stride + HH,
-                       w * stride:w * stride + WW] += \
+                          h * stride:h * stride + HH,
+                          w * stride:w * stride + WW] += \
                     np.sum((W[:, :, :, :] * dout_dim_extend), axis=0)
 
     # Remove the padding
@@ -789,17 +789,19 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     ###########################################################################
     N, C, H, W = x.shape
     x = x.reshape(N, G, C // G, H, W)
-    sample_mean = np.mean(x, axis=(2,3,4), keepdims=True)
-    sample_var = np.var(x, axis=(2,3,4), keepdims=True)
+    sample_mean = np.mean(x, axis=(2, 3, 4), keepdims=True)
+    sample_var = np.var(x, axis=(2, 3, 4), keepdims=True)
 
     vareps = sample_var + eps
     x_normalized = (x - sample_mean) / np.sqrt(vareps)
-    x = x_normalized.reshape(N, C, H, W)
-    out = x * gamma + beta
+    out = x_normalized.reshape(N, C, H, W)
+    out = out * gamma + beta
 
+    x = x.reshape(N, C, H, W)
     cache = (x, gamma, sample_mean, vareps, x_normalized, G)
 
     return out, cache
+
 
 def spatial_groupnorm_backward(dout, cache):
     """
@@ -821,24 +823,22 @@ def spatial_groupnorm_backward(dout, cache):
     # This will be extremely similar to the layer norm implementation.        #
     ###########################################################################
     x = cache[0]
-    N, C, H, W = x.shape
     gamma = cache[1]
     sample_mean = cache[2]
     vareps = cache[3]
     x_normalized = cache[4]
+
     G = cache[5]
-    D = (C//G)*H*W
+    N, C, H, W = x.shape
+    D = (C//G) * H * W
     x = x.reshape(N, G, C // G, H, W)
 
-    dout_r = dout.reshape(N, G, C // G, H, W)
-    dbeta = np.sum(dout_r, axis=(0,3,4))
+    dbeta = np.sum(dout, axis=(0, 2, 3))
     dbeta = dbeta.reshape(1, C, 1, 1)
 
     x_normalized = x_normalized.reshape(N, C, H, W)
     dgamma = np.sum(dout * x_normalized, axis=(0, 2, 3))
     dgamma = dgamma.reshape(1, C, 1, 1)
-
-    # TODO: Fix dx?
 
     x_mu = x - sample_mean
     dx_norm = dout * gamma
@@ -846,15 +846,15 @@ def spatial_groupnorm_backward(dout, cache):
 
     std_inv = 1/np.sqrt(vareps)
 
-    dvar = np.sum(dx_norm * x_mu, axis=(2,3,4)) *\
-        -.5 * np.power(vareps, -3/2).T
+    summ = np.sum(dx_norm * x_mu, axis=(2, 3, 4), keepdims=True)
+    dvar = summ * -.5 * np.power(vareps, -3/2)
 
-    dmu_term1 = np.sum((dx_norm * -std_inv), axis=(2,3,4))
+    dmu_term1 = np.sum((dx_norm * -std_inv), axis=(2, 3, 4), keepdims=True)
 
     dmu = dmu_term1 + \
-        dvar * np.mean(-2. * x_mu, axis=(2,3,4))
+        dvar * np.mean(-2. * x_mu, axis=(2, 3, 4), keepdims=True)
 
-    dx = (dx_norm * std_inv) + (dvar.T * 2 * x_mu / D) + (dmu.T / D)
+    dx = (dx_norm * std_inv) + (dvar * 2 * x_mu / D) + (dmu / D)
 
     dx = dx.reshape(N, C, H, W)
 
