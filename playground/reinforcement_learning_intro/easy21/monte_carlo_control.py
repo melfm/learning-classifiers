@@ -2,14 +2,14 @@
 """
 import numpy as np
 from matplotlib import cm
+from tqdm import tqdm
 
 import easy21_environment as easyEnv
-import utils as utils
 
 
 class MonteCarloAgent:
 
-    def __init__(self, environment, num_episodes=1000, n0=100):
+    def __init__(self, environment, num_episodes=10000, n0=100):
         self.env = environment
         self.num_episodes = num_episodes
         # This is a constant-hyperparameter.
@@ -33,29 +33,24 @@ class MonteCarloAgent:
         self.episodes = 0
 
     def get_epsilon(self, N):
-        return self.N0 / self.N0 + N
+        return self.N0 / (self.N0 + N)
 
     def epsilon_greedy_policy(self, state):
         """Epsilon-greedy exploration strategy.
 
         Args:
-            Q:
-            N:
-            state:
+            state: State object representing the status of the game.
+
+        Returns:
+            action: Chosen action based on Epsilon-greedy.
         """
-        dealer = state.dealer_sum
-        player = state.player_sum
-        # pdb.set_trace()
-        epsilon = self.get_epsilon(np.sum(self.N[dealer - 1,
-                                                 player - 1,
-                                                 :]))
-        if np.random.rand() < (1 - epsilon):
-            print('Epsilon greedy, picking best action')
-            action = np.argmax(self.Q[dealer - 1,
-                                      player - 1,
-                                      :])
+        dealer = state.dealer_sum - 1
+        player = state.player_sum - 1
+        epsilon = self.get_epsilon(sum(self.N[dealer, player, :]))
+        if np.random.rand() < (epsilon):
+
+            action = np.argmax(self.Q[dealer, player, :])
         else:
-            print('Epsilon greedy, exploring')
             action = np.random.choice(easyEnv.ACTIONS)
 
         return action
@@ -67,7 +62,7 @@ class MonteCarloAgent:
         whole trajectory.
         """
 
-        for episode in range(1, self.num_episodes + 1):
+        for episode in tqdm(range(self.num_episodes)):
             player_trajectories = []
 
             # Initialize the state
@@ -94,20 +89,16 @@ class MonteCarloAgent:
                 alpha = 1.0 / self.N[idx]
                 self.Q[idx] += alpha * (reward - self.Q[idx])
 
-        print('Win rate ', (float(self.player_wins)/self.num_episodes) * 100)
-
         for d in range(self.env.dealer_value_count):
             for p in range(self.env.player_value_count):
                 self.V[d, p] = max(self.Q[d, p, :])
 
     def plot_frame(self, ax):
-        def get_stat_val(x, y):
-            return self.V[x, y]
 
         X = np.arange(0, self.env.dealer_value_count, 1)
         Y = np.arange(0, self.env.player_value_count, 1)
         X, Y = np.meshgrid(X, Y)
-        Z = get_stat_val(X, Y)
+        Z = self.V[X, Y]
         surf = ax.plot_surface(
             X,
             Y,
