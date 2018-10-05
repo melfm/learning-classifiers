@@ -39,9 +39,9 @@ def main(args):
 
     # Makes an animation by repeatedly calling a function, e.g. 30 frames.
     ani = animation.FuncAnimation(fig, animate, 10, fargs=(fig, ax, agent),
-                                  repeat=False)
+                                  repeat=True)
 
-    ani.save('MC_Agent_N100.gif', writer='imagemagick', fps=1)
+    ani.save('MC_Agent_N100.gif', writer='imagemagick', fps=3)
 
     """
     # Nomal plotting
