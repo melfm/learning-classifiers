@@ -1,30 +1,13 @@
 import argparse
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+
+from mpl_toolkits.mplot3d import axes3d
 
 import easy21_environment as easyEnv
 import monte_carlo_control as MC
 import td_learning_sarsa as TDS
-
-
-def animate(frame, fig, ax, agent):
-
-    episodes = agent.num_episodes
-
-    # Train the agent inside this function, since we are
-    # passing this to the `FuncAnimation`.
-    agent.train()
-
-    ax.clear()
-    surf = agent.plot_frame(ax)
-    mc_score = '%.1f' % (agent.player_wins/episodes*100.0)
-    plt.title(
-        'MC score:%s frame:%s episodes:%s ' %
-        (mc_score, frame, episodes))
-    fig.canvas.draw()
-
-    return surf
+import utils as util
 
 
 def main(args):
@@ -35,40 +18,37 @@ def main(args):
     fig_name = None
 
     if agent_mode == 'monte-carlo':
-        agent = MC.MonteCarloAgent(env, num_episodes=args.num_episodes,
-                                   n0=args.n0)
+        print('Training Monte-Carlo Agent ...')
+        mc_agent = MC.MonteCarloAgent(env, num_episodes=args.num_episodes,
+                                      n0=args.n0)
         fig_name = 'Monte-Carlo-Easy21'
+
+        util.train_and_animate(fig_name, 30, mc_agent, args.num_episodes)
+
     elif agent_mode == 'td-sarsa':
-        agent = TDS.SarsaAgent(env, num_episodes=args.num_episodes,
-                               n0=args.n0)
-        fig_name = 'TD-Sarsa-Easy21'
+        print('Training TD-Sarsa Agent ...')
+        mc_agent = MC.MonteCarloAgent(env, num_episodes=args.num_episodes,
+                                      n0=args.n0)
+        mc_agent.train()
+        num_all_states = mc_agent.Q.shape[0] * mc_agent.Q.shape[1] * 2
 
-    print('Agent %s training ....', agent_mode)
+        td_lambdas = np.arange(0, 1.10, 0.1)
+        mse_per_lambda = []
+        for lam in td_lambdas:
 
-    fig = plt.figure(fig_name)
-    ax = fig.add_subplot(111, projection='3d')
+            sarsa_agent = TDS.SarsaAgent(env, num_episodes=args.num_episodes,
+                                         n0=args.n0, td_lambda=lam)
+            sarsa_agent.train()
+            mse_term = np.sum(
+                np.square(
+                    (sarsa_agent.Q - mc_agent.Q))) / float(num_all_states)
+            mse_per_lambda.append(mse_term)
 
-    # Makes an animation by repeatedly calling a function, e.g. 30 frames.
-    ani = animation.FuncAnimation(fig, animate, 10, fargs=(fig, ax, agent),
-                                  repeat=True)
+        util.plot_lambda_vs_mse(td_lambdas, mse_per_lambda)
 
-    gif_fig = fig_name + '_N' + str(args.num_episodes) + '.gif'
-    ani.save(gif_fig, writer='imagemagick', fps=3)
+    else:
+        raise ValueError('Invalid agent mode.')
 
-    """
-    # Nomal plotting
-    fig = plt.figure('Monte-Carlo-Easy21')
-    ax = fig.add_subplot(111, projection='3d')
-
-    ax.clear()
-    agent.plot_frame(ax)
-
-    plt.title('V*')
-    plt.ylabel('player sum', size=18)
-    plt.xlabel('dealer sum', size=18)
-
-    plt.show()
-    """
 
 
 if __name__ == "__main__":

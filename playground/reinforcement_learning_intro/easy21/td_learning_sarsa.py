@@ -1,18 +1,18 @@
 """TD Learning.
 """
 import numpy as np
-from matplotlib import cm
 from tqdm import tqdm
 
 import easy21_environment as easyEnv
 
-import pdb
 
 class SarsaAgent:
 
-    def __init__(self, environment, num_episodes=1000, n0=100):
+    def __init__(self, environment, num_episodes=1000, n0=100,
+                 td_lambda=0):
         self.env = environment
         self.num_episodes = num_episodes
+        self.td_lambda = td_lambda
         # This is a constant-hyperparameter.
         self.N0 = float(n0)
 
@@ -31,6 +31,10 @@ class SarsaAgent:
         self.V = np.zeros((self.env.dealer_value_count,
                            self.env.player_value_count))
 
+        self.eligibility = np.zeros((self.env.dealer_value_count,
+                                     self.env.player_value_count,
+                                     self.env.action_count))
+
         self.player_wins = 0
         self.episodes = 0
 
@@ -43,7 +47,7 @@ class SarsaAgent:
         Args:
             state: State object representing the status of the game.
 
-        Returns:
+        Retur1ns:
             action: Chosen action based on Epsilon-greedy.
         """
         dealer = state.dealer_sum - 1
@@ -65,21 +69,37 @@ class SarsaAgent:
 
             # Initialize the state
             state = self.env.init_state()
+            action = self.epsilon_greedy_policy(state)
+            next_action = action
 
             while not state.terminal:
-                action = self.epsilon_greedy_policy(state)
 
-                # Book-keeping the visits
+                # Execute the action
                 next_state, reward = self.env.step(state, action)
-
-                # Sarsa update
+                # State-action index
                 idx = state.dealer_sum - 1, state.player_sum - 1, action
+
+                if not next_state.terminal:
+                    next_action = self.epsilon_greedy_policy(next_state)
+                    next_idx = next_state.dealer_sum - 1, \
+                        next_state.player_sum - 1, next_action
+
+                    td_error = reward + self.Q[next_idx] - self.Q[idx]
+                else:
+                    td_error = reward - self.Q[idx]
+
                 self.N[idx] += 1
+                self.eligibility[idx] += 1
+                # Step-size
                 alpha = 1.0 / self.N[idx]
 
-                self.Q[idx] += alpha * (reward - self.Q[idx])
+                self.eligibility[idx] *= self.td_lambda
+
+                # Sarsa update
+                self.Q[idx] += alpha * (td_error) * self.eligibility[idx]
 
                 state = next_state
+                action = next_action
 
             if reward == 1:
                 self.player_wins += 1
@@ -87,20 +107,3 @@ class SarsaAgent:
         for d in range(self.env.dealer_value_count):
             for p in range(self.env.player_value_count):
                 self.V[d, p] = max(self.Q[d, p, :])
-
-    def plot_frame(self, ax):
-
-        X = np.arange(0, self.env.dealer_value_count, 1)
-        Y = np.arange(0, self.env.player_value_count, 1)
-        X, Y = np.meshgrid(X, Y)
-        Z = self.V[X, Y]
-        surf = ax.plot_surface(
-            X,
-            Y,
-            Z,
-            rstride=1,
-            cstride=1,
-            cmap=cm.coolwarm,
-            linewidth=0,
-            antialiased=False)
-        return surf
