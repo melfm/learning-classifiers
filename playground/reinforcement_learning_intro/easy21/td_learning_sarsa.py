@@ -16,6 +16,12 @@ class SarsaAgent:
         # This is a constant-hyperparameter.
         self.N0 = float(n0)
 
+        self._reset()
+
+        self.player_wins = 0
+        self.episodes = 0
+
+    def _reset(self):
         self.Q = np.zeros((self.env.dealer_value_count,
                            self.env.player_value_count,
                            self.env.action_count))
@@ -34,9 +40,6 @@ class SarsaAgent:
         self.eligibility = np.zeros((self.env.dealer_value_count,
                                      self.env.player_value_count,
                                      self.env.action_count))
-
-        self.player_wins = 0
-        self.episodes = 0
 
     def get_epsilon(self, N):
         return self.N0 / (self.N0 + N)
@@ -61,49 +64,84 @@ class SarsaAgent:
 
         return action
 
-    def train(self):
+    def train(self, mc_agent_q, run_single_lambda=False):
         """TD-Sarsa training.
+
+        Args:
+            mc_agent_q: True values Q ∗ (s, a), computed by Monte-Carlo.
+            run_single_lambda: Flag to only run one iteration for the
+                assigned lambda (upon agent instantiation).
+
+        Returns:
+            mse_per_lambdas: Mean squared error per episode. The error
+                is compared against mc_agent_q state-action values.
         """
 
-        for episode in tqdm(range(self.num_episodes)):
+        if run_single_lambda:
+            td_lambdas = np.arange(self.td_lambda, self.td_lambda+1, 1)
+        else:
 
-            # Initialize the state
-            state = self.env.init_state()
-            action = self.epsilon_greedy_policy(state)
-            next_action = action
+            td_lambdas = np.arange(0, 1.10, 0.1)
+        num_all_states = mc_agent_q.shape[0] * mc_agent_q.shape[1] * 2
 
-            while not state.terminal:
+        mse_per_lambdas = np.zeros((len(td_lambdas), self.num_episodes))
+        end_of_episode_mse = np.zeros(len(td_lambdas))
 
-                # Execute the action
-                next_state, reward = self.env.step(state, action)
-                # State-action index
-                idx = state.dealer_sum - 1, state.player_sum - 1, action
+        for li, lam in enumerate(td_lambdas):
+            self._reset()
 
-                if not next_state.terminal:
-                    next_action = self.epsilon_greedy_policy(next_state)
-                    next_idx = next_state.dealer_sum - 1, \
-                        next_state.player_sum - 1, next_action
+            for episode in tqdm(range(self.num_episodes)):
 
-                    td_error = reward + self.Q[next_idx] - self.Q[idx]
-                else:
-                    td_error = reward - self.Q[idx]
+                # Initialize the state
+                state = self.env.init_state()
+                action = self.epsilon_greedy_policy(state)
+                next_action = action
+                lambda_steps = []
 
-                self.N[idx] += 1
-                self.eligibility[idx] += 1
-                # Step-size
-                alpha = 1.0 / self.N[idx]
+                while not state.terminal:
 
-                self.eligibility[idx] *= self.td_lambda
+                    # Execute the action
+                    next_state, reward = self.env.step(state, action)
+                    # State-action index
+                    idx = state.dealer_sum - 1, state.player_sum - 1, action
 
-                # Sarsa update
-                self.Q[idx] += alpha * (td_error) * self.eligibility[idx]
+                    if not next_state.terminal:
+                        next_action = self.epsilon_greedy_policy(next_state)
+                        next_idx = next_state.dealer_sum - 1, \
+                            next_state.player_sum - 1, next_action
 
-                state = next_state
-                action = next_action
+                        td_error = reward + self.Q[next_idx] - self.Q[idx]
+                    else:
+                        td_error = reward - self.Q[idx]
 
-            if reward == 1:
-                self.player_wins += 1
+                    self.N[idx] += 1
+                    self.eligibility[idx] += 1
+                    lambda_steps.append(idx)
 
-        for d in range(self.env.dealer_value_count):
-            for p in range(self.env.player_value_count):
-                self.V[d, p] = max(self.Q[d, p, :])
+                    # Sarsa update
+                    for (_index) in lambda_steps:
+                        # Step-size
+                        alpha = 1.0 / self.N[_index]
+                        self.Q[_index] += alpha * (
+                            td_error) * self.eligibility[_index]
+                        self.eligibility[_index] *= self.td_lambda
+
+                    state = next_state
+                    action = next_action
+
+                if reward == 1:
+                    self.player_wins += 1
+
+                mse_term = np.sum(
+                    np.square(
+                        (self.Q - mc_agent_q))) / float(num_all_states)
+
+                mse_per_lambdas[li, episode] = mse_term
+
+            end_of_episode_mse[li] = mse_term
+
+            for d in range(self.env.dealer_value_count):
+                for p in range(self.env.player_value_count):
+                    self.V[d, p] = max(self.Q[d, p, :])
+
+        return mse_per_lambdas, end_of_episode_mse
