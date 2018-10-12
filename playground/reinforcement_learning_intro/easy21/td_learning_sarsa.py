@@ -118,7 +118,7 @@ class SarsaAgent:
                     self.eligibility[idx] += 1
                     lambda_steps.append(idx)
 
-                    # Sarsa update
+                    # Sarsa-Lambda update
                     for (_index) in lambda_steps:
                         # Step-size
                         alpha = 1.0 / self.N[_index]
