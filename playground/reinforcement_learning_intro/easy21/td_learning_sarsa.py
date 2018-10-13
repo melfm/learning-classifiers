@@ -7,6 +7,12 @@ import easy21_environment as easyEnv
 
 
 class SarsaAgent:
+    """For the algorithm sketch, see Sutton Ch.12.7 Sarsa(lambda).
+    The first update looks ahead one full step, to the next
+    state–action pair, the second looks ahead two steps, to the
+    second state–action pair, and so on. A final update is based on
+    the complete return.
+    """
 
     def __init__(self, environment, num_episodes=1000, n0=100,
                  td_lambda=0):
@@ -82,7 +88,6 @@ class SarsaAgent:
         else:
 
             td_lambdas = np.arange(0, 1.10, 0.1)
-        num_all_states = mc_agent_q.shape[0] * mc_agent_q.shape[1] * 2
 
         mse_per_lambdas = np.zeros((len(td_lambdas), self.num_episodes))
         end_of_episode_mse = np.zeros(len(td_lambdas))
@@ -96,7 +101,6 @@ class SarsaAgent:
                 state = self.env.init_state()
                 action = self.epsilon_greedy_policy(state)
                 next_action = action
-                lambda_steps = []
 
                 while not state.terminal:
 
@@ -116,15 +120,10 @@ class SarsaAgent:
 
                     self.N[idx] += 1
                     self.eligibility[idx] += 1
-                    lambda_steps.append(idx)
 
-                    # Sarsa-Lambda update
-                    for (_index) in lambda_steps:
-                        # Step-size
-                        alpha = 1.0 / self.N[_index]
-                        self.Q[_index] += alpha * (
-                            td_error) * self.eligibility[_index]
-                        self.eligibility[_index] *= self.td_lambda
+                    alpha = 1.0 / self.N[idx]
+                    self.Q += alpha * td_error * self.eligibility
+                    self.eligibility *= self.td_lambda
 
                     state = next_state
                     action = next_action
@@ -132,9 +131,7 @@ class SarsaAgent:
                 if reward == 1:
                     self.player_wins += 1
 
-                mse_term = np.sum(
-                    np.square(
-                        (self.Q - mc_agent_q))) / float(num_all_states)
+                mse_term = np.sum((self.Q - mc_agent_q) ** 2) / np.size(self.Q)
 
                 mse_per_lambdas[li, episode] = mse_term
 

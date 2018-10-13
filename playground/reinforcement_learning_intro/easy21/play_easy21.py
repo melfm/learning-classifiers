@@ -40,9 +40,9 @@ def main(args):
 
     elif agent_mode == 'td-sarsa':
         print('Training TD-Sarsa Agent ...\n')
-        print('Loading Monte-Carlo Agent ...\n')
+        print('Loading Monte-Carlo Agent ... hoping it exists!\n')
         # Monte-Carlo iteration, used to save the model name
-        mc_iter = 10000000
+        mc_iter = 10000
         model_name = 'monte-carlo-model_' + str(mc_iter) + '.pickle'
         mc_agent_q = pickle.load(open(model_name, 'rb'))
 
@@ -55,12 +55,11 @@ def main(args):
             util.plot_lambda_vs_mse(end_of_episode_mse)
 
 
-        if args.plot_train_err:
+        if args.plot_lam_train_err:
             num_episodes = 10000
-            lam = 0
 
             sarsa_agent = TDS.SarsaAgent(env, num_episodes=num_episodes,
-                                         n0=args.n0, td_lambda=lam)
+                                         n0=args.n0, td_lambda=0)
 
             mse_per_lambdas, _ = sarsa_agent.train(mc_agent_q, run_single_lambda=True)
 
@@ -68,18 +67,8 @@ def main(args):
             util.plot_training_error(training_err, num_episodes,
                                       'TD_training_err_lam_0')
 
-            num_episodes = 10000
-            lam = 1
 
-            sarsa_agent = TDS.SarsaAgent(env, num_episodes=num_episodes,
-                                         n0=args.n0, td_lambda=lam)
-            mse_per_lambdas, _ = sarsa_agent.train(mc_agent_q, run_single_lambda=True)
-
-            training_err = np.squeeze(mse_per_lambdas)
-            util.plot_training_error(training_err, num_episodes,
-                                      'TD_training_err_lam_1')
-
-        if not args.plot_train_err and not args.plot_tdsarsa_lambda:
+        if not args.plot_lam_train_err and not args.plot_tdsarsa_lambda:
             raise ValueError(
                 'You need to run TD-Lambda with at-least one of the options.')
 
@@ -120,7 +109,7 @@ if __name__ == "__main__":
                         default=True,
                         help='Plot MSE error against choice of lambda.')
 
-    parser.add_argument('--plot_train_err',
+    parser.add_argument('--plot_lam_train_err',
                         type=bool,
                         default=False,
                         help='TD-Sarsa agent learning algorithm.')
