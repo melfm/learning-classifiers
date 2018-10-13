@@ -24,7 +24,7 @@ def main(args):
         fig_name = 'Monte-Carlo-Easy21'
 
         if args.animate_plot:
-            util.train_and_animate(fig_name, 100, mc_agent, env,
+            util.train_and_animate(fig_name, 30, mc_agent, env,
                                    args.num_episodes)
         else:
             mc_agent.train()
