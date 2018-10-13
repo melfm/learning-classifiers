@@ -1,7 +1,6 @@
 """Monte-Carlo Control.
 """
 import numpy as np
-from matplotlib import cm
 from tqdm import tqdm
 
 import easy21_environment as easyEnv
@@ -92,20 +91,3 @@ class MonteCarloAgent:
         for d in range(self.env.dealer_value_count):
             for p in range(self.env.player_value_count):
                 self.V[d, p] = max(self.Q[d, p, :])
-
-    def plot_frame(self, ax):
-
-        X = np.arange(0, self.env.dealer_value_count, 1)
-        Y = np.arange(0, self.env.player_value_count, 1)
-        X, Y = np.meshgrid(X, Y)
-        Z = self.V[X, Y]
-        surf = ax.plot_surface(
-            X,
-            Y,
-            Z,
-            rstride=1,
-            cstride=1,
-            cmap=cm.coolwarm,
-            linewidth=0,
-            antialiased=False)
-        return surf
