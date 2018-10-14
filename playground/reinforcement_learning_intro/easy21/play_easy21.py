@@ -7,6 +7,7 @@ from mpl_toolkits.mplot3d import axes3d
 import easy21_environment as easyEnv
 import monte_carlo_control as MC
 import td_learning_sarsa as TDS
+import linear_function_approx as lfasarsa
 import utils as util
 
 
@@ -71,6 +72,21 @@ def main(args):
         if not args.plot_lam_train_err and not args.plot_tdsarsa_lambda:
             raise ValueError(
                 'You need to run TD-Lambda with at-least one of the options.')
+
+    elif agent_mode == 'lfa-sarsa':
+        print('Training Linear-Function-Approximation-Sarsa Agent ...\n')
+        print('Loading Monte-Carlo Agent ... hoping it exists!\n')
+        # Monte-Carlo iteration, used to save the model name
+        mc_iter = 10000
+        model_name = 'monte-carlo-model_' + str(mc_iter) + '.pickle'
+        mc_agent_q = pickle.load(open(model_name, 'rb'))
+
+
+        sarsa_agent = lfasarsa.LFASarsaAgent(
+                env, num_episodes=args.num_episodes)
+        mse_per_lambdas, end_of_episode_mse = sarsa_agent.train(mc_agent_q)
+        util.plot_mse_eps_per_lambda(mse_per_lambdas)
+        util.plot_lambda_vs_mse(end_of_episode_mse)
 
     else:
         raise ValueError('Invalid agent mode.')

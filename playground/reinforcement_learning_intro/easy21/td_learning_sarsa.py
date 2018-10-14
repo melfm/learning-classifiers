@@ -7,11 +7,8 @@ import easy21_environment as easyEnv
 
 
 class SarsaAgent:
-    """For the algorithm sketch, see Sutton Ch.12.7 Sarsa(lambda).
-    The first update looks ahead one full step, to the next
-    state–action pair, the second looks ahead two steps, to the
-    second state–action pair, and so on. A final update is based on
-    the complete return.
+    """Sarsa(lambda). For the sketch of the algorithm, see David Silver
+    slides - Lecture 5 - Model-Free Control.
     """
 
     def __init__(self, environment, num_episodes=1000, n0=100,
@@ -101,6 +98,7 @@ class SarsaAgent:
                 state = self.env.init_state()
                 action = self.epsilon_greedy_policy(state)
                 next_action = action
+                seen_states = []
 
                 while not state.terminal:
 
@@ -121,9 +119,15 @@ class SarsaAgent:
                     self.N[idx] += 1
                     self.eligibility[idx] += 1
 
-                    alpha = 1.0 / self.N[idx]
-                    self.Q += alpha * td_error * self.eligibility
-                    self.eligibility *= self.td_lambda
+                    seen_states.append(idx)
+
+                    # Sarsa-Lambda update
+                    for (_index) in seen_states:
+                        # Step-size
+                        alpha = 1.0 / self.N[_index]
+                        self.Q[_index] += alpha * (
+                            td_error) * self.eligibility[_index]
+                        self.eligibility[_index] *= self.td_lambda
 
                     state = next_state
                     action = next_action
