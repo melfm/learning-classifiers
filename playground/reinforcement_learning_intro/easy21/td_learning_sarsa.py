@@ -94,6 +94,10 @@ class SarsaAgent:
 
             for episode in tqdm(range(self.num_episodes)):
 
+                self.eligibility = np.zeros((self.env.dealer_value_count,
+                                            self.env.player_value_count,
+                                            self.env.action_count))
+
                 # Initialize the state
                 state = self.env.init_state()
                 action = self.epsilon_greedy_policy(state)
@@ -127,7 +131,7 @@ class SarsaAgent:
                         alpha = 1.0 / self.N[_index]
                         self.Q[_index] += alpha * (
                             td_error) * self.eligibility[_index]
-                        self.eligibility[_index] *= self.td_lambda
+                        self.eligibility[_index] *= lam
 
                     state = next_state
                     action = next_action

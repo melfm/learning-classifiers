@@ -55,19 +55,18 @@ def main(args):
             util.plot_mse_eps_per_lambda(mse_per_lambdas)
             util.plot_lambda_vs_mse(end_of_episode_mse)
 
-
         if args.plot_lam_train_err:
             num_episodes = 10000
 
             sarsa_agent = TDS.SarsaAgent(env, num_episodes=num_episodes,
                                          n0=args.n0, td_lambda=0)
 
-            mse_per_lambdas, _ = sarsa_agent.train(mc_agent_q, run_single_lambda=True)
+            mse_per_lambdas, _ = sarsa_agent.train(
+                mc_agent_q, run_single_lambda=True)
 
             training_err = np.squeeze(mse_per_lambdas)
             util.plot_training_error(training_err, num_episodes,
-                                      'TD_training_err_lam_0')
-
+                                     'TD_training_err_lam_0')
 
         if not args.plot_lam_train_err and not args.plot_tdsarsa_lambda:
             raise ValueError(
@@ -81,12 +80,13 @@ def main(args):
         model_name = 'monte-carlo-model_' + str(mc_iter) + '.pickle'
         mc_agent_q = pickle.load(open(model_name, 'rb'))
 
-
         sarsa_agent = lfasarsa.LFASarsaAgent(
                 env, num_episodes=args.num_episodes)
         mse_per_lambdas, end_of_episode_mse = sarsa_agent.train(mc_agent_q)
         util.plot_mse_eps_per_lambda(mse_per_lambdas)
         util.plot_lambda_vs_mse(end_of_episode_mse)
+        plot_name = 'lfa-sarsa-surface-plot-' + str(args.num_episodes)
+        util.plot_and_save(env, sarsa_agent.V, plot_name)
 
     else:
         raise ValueError('Invalid agent mode.')

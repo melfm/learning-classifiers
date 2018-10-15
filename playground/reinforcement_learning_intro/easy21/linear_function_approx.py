@@ -37,8 +37,9 @@ class LFASarsaAgent:
         self.V = np.zeros((self.env.dealer_value_count,
                            self.env.player_value_count))
 
+        # Smaller weights help with stabilization
         self.W = np.random.rand(reduce((lambda x, y: x * y),
-                                       (self.feature_dim)), 1)
+                                       (self.feature_dim)), 1) * 0.001
 
         # These eligbilities are on the feature space now, so same
         # size as the weights.
@@ -149,6 +150,7 @@ class LFASarsaAgent:
             self._reset()
 
             for episode in tqdm(range(self.num_episodes)):
+                self.eligibility = np.zeros_like(self.W)
 
                 # Initialize the state
                 state = self.env.init_state()
@@ -170,7 +172,7 @@ class LFASarsaAgent:
 
                     # Update = step-size × prediction error × feature value
                     # E_t = lambda * E_{t-1} + x(S_t)
-                    self.eligibility = self.td_lambda * self.eligibility + \
+                    self.eligibility = lam * self.eligibility + \
                         self.make_features(state, action).reshape(-1, 1)
                     dw = self.alpha * td_error * self.eligibility
                     # Adjust the weights
@@ -194,5 +196,8 @@ class LFASarsaAgent:
                         lam, episode, mse_term))
 
             end_of_episode_mse[li] = mse_term
+            for d in range(self.env.dealer_value_count):
+                for p in range(self.env.player_value_count):
+                    self.V[d, p] = max(sarsa_q[d, p, :])
 
         return mse_per_lambdas, end_of_episode_mse
