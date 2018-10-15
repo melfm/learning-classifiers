@@ -95,8 +95,8 @@ class SarsaAgent:
             for episode in tqdm(range(self.num_episodes)):
 
                 self.eligibility = np.zeros((self.env.dealer_value_count,
-                                            self.env.player_value_count,
-                                            self.env.action_count))
+                                             self.env.player_value_count,
+                                             self.env.action_count))
 
                 # Initialize the state
                 state = self.env.init_state()
