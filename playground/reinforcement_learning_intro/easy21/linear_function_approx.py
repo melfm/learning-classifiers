@@ -5,7 +5,7 @@ from functools import reduce
 from tqdm import tqdm
 
 import easy21_environment as easyEnv
-import pdb
+
 
 class LFASarsaAgent:
     """Linear Function Approximation Sarsa Agent.
@@ -37,12 +37,12 @@ class LFASarsaAgent:
         self.V = np.zeros((self.env.dealer_value_count,
                            self.env.player_value_count))
 
-        self.W = np.random.rand(reduce((lambda x, y:x * y),
+        self.W = np.random.rand(reduce((lambda x, y: x * y),
                                        (self.feature_dim)), 1)
 
+        # These eligbilities are on the feature space now, so same
+        # size as the weights.
         self.eligibility = np.zeros_like(self.W)
-
-        self.linear_comb_features = self.linearly_combine_features()
 
     def epsilon_greedy_policy(self, state):
         """Epsilon-greedy exploration strategy.
@@ -50,26 +50,26 @@ class LFASarsaAgent:
         Args:
             state: State object representing the status of the game.
 
-        Retur1ns:
+        Returns:
             action: Chosen action based on Epsilon-greedy.
+            qhat: Estimated features.
         """
-        dealer = state.dealer_sum - 1
-        player = state.player_sum - 1
         if np.random.rand() < (self.epsilon):
-            # TODO
-            print('Implement')
+            qhat, action = max(((np.dot(self.make_features(state, a),
+                                        self.W), a)
+                                for a in easyEnv.ACTIONS), key=lambda x: x[0])
         else:
             action = np.random.choice(easyEnv.ACTIONS)
+            # This is the same as sum and multiplication (dimensions need to be
+            # correct for that though.)
+            qhat = np.dot(self.make_features(state, action), self.W)
 
-        return action
+        return action, qhat
 
     def make_features(self, state, action):
-        """Dealer's interval: dealer(s) = {[1, 4], [4, 7], [7, 10]}
-         Player's interval: player(s) = {[1, 6], [4, 9], [7, 12], [10, 15],
-         [13, 18], [16, 21]}
-         Each binary feature has a value of 1 iff (s, a) lies within
-         the cuboid of state-space corresponding to
-         that feature, and the action corresponding to that feature.
+        """Each binary feature has a value of 1 iff (s, a) lies within
+         the cuboid of state-space corresponding to that feature,
+         and the action corresponding to that feature.
         """
         if state.terminal:
             return 0
@@ -98,12 +98,12 @@ class LFASarsaAgent:
         for action_idx, act in enumerate(self.cuboid_intervals['action']):
             if action == act:
                 phi[:, :, action_idx] = state_features
-
+        # Flatten the features
         phi = phi.reshape(1, -1)
 
         return phi.astype(int)
 
-    def linearly_combine_features(self):
+    def combine_final_features(self):
         dealer_count = self.env.dealer_value_count
         player_count = self.env.player_value_count
         action_count = self.env.action_count
@@ -112,7 +112,6 @@ class LFASarsaAgent:
                                          player_count,
                                          action_count))
 
-
         for dealer in range(0, dealer_count):
             for player in range(0, player_count):
                 for action in range(0, action_count):
@@ -120,9 +119,9 @@ class LFASarsaAgent:
                     phi = self.make_features(state, action)
                     # Represent action-value function by a linear
                     # combination of features
-                    # TODO
+                    linear_comb_features[dealer, player, action] = \
+                        np.dot(phi, self.W)
         return linear_comb_features
-
 
     def train(self, mc_agent_q, run_single_lambda=False):
         """TD-Sarsa training.
@@ -153,7 +152,7 @@ class LFASarsaAgent:
 
                 # Initialize the state
                 state = self.env.init_state()
-                action = self.epsilon_greedy_policy(state)
+                action, qhat = self.epsilon_greedy_policy(state)
                 next_action = action
 
                 while not state.terminal:
@@ -162,18 +161,20 @@ class LFASarsaAgent:
                     next_state, reward = self.env.step(state, action)
 
                     if not next_state.terminal:
-                        next_action = self.epsilon_greedy_policy(next_state)
-                        #TODO
+                        next_action, next_qhat = \
+                            self.epsilon_greedy_policy(next_state)
+                        td_error = reward + next_qhat - qhat
 
                     else:
-                        # TODO
+                        td_error = reward - qhat
 
                     # Update = step-size × prediction error × feature value
+                    # E_t = lambda * E_{t-1} + x(S_t)
                     self.eligibility = self.td_lambda * self.eligibility + \
                         self.make_features(state, action).reshape(-1, 1)
-                    gradient = self.alpha * td_error * self.eligibility
+                    dw = self.alpha * td_error * self.eligibility
                     # Adjust the weights
-                    self.W += gradient
+                    self.W += dw
 
                     state = next_state
                     action = next_action
@@ -181,15 +182,16 @@ class LFASarsaAgent:
                 if reward == 1:
                     self.player_wins += 1
 
-                # TODO
-                mse_term = np.sum((approximated_q - mc_agent_q)
-                                  ** 2) / np.size(approximated_q)
+                # Combine all the features we just learned.
+                sarsa_q = self.combine_final_features()
+                mse_term = np.sum((sarsa_q - mc_agent_q)
+                                  ** 2) / np.size(sarsa_q)
 
                 mse_per_lambdas[li, episode] = mse_term
 
                 if episode % 1000 == 0 or episode+1 == self.num_episodes:
-                    print("Lambda=%.1f Episode %06d, MSE %5.3f, Wins %.3f" % (
-                        self.td_lambda, episode, mse_term, self.player_wins/(episode+1)))
+                    print("Lambda=%.1f Episode %06d, MSE %5.3f" % (
+                        lam, episode, mse_term))
 
             end_of_episode_mse[li] = mse_term
 

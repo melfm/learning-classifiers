@@ -53,7 +53,7 @@ class SarsaAgent:
         Args:
             state: State object representing the status of the game.
 
-        Retur1ns:
+        Returns:
             action: Chosen action based on Epsilon-greedy.
         """
         dealer = state.dealer_sum - 1
