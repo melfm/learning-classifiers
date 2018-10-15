@@ -39,7 +39,7 @@ class LFASarsaAgent:
 
         # Smaller weights help with stabilization
         self.W = np.random.rand(reduce((lambda x, y: x * y),
-                                       (self.feature_dim)), 1) * 0.001
+                                       (self.feature_dim)), 1)
 
         # These eligbilities are on the feature space now, so same
         # size as the weights.
@@ -75,7 +75,7 @@ class LFASarsaAgent:
         if state.terminal:
             return 0
 
-        dealer_sum, player_sum = state.dealer_sum, state.player_sum
+        dealer_sum, player_sum = state.dealer_idx(), state.player_idx()
 
         state_features = np.zeros((self.feature_dim[0], self.feature_dim[1]),
                                   dtype=int)
@@ -113,14 +113,14 @@ class LFASarsaAgent:
                                          player_count,
                                          action_count))
 
-        for dealer in range(0, dealer_count):
-            for player in range(0, player_count):
+        for dealer in range(1, dealer_count+1):
+            for player in range(1, player_count+1):
                 for action in range(0, action_count):
                     state = easyEnv.State(dealer, player)
                     phi = self.make_features(state, action)
                     # Represent action-value function by a linear
                     # combination of features
-                    linear_comb_features[dealer, player, action] = \
+                    linear_comb_features[dealer-1, player-1, action] = \
                         np.dot(phi, self.W)
         return linear_comb_features
 
@@ -147,13 +147,14 @@ class LFASarsaAgent:
         end_of_episode_mse = np.zeros(len(td_lambdas))
 
         for li, lam in enumerate(td_lambdas):
+
             self._reset()
 
             for episode in tqdm(range(self.num_episodes)):
-                self.eligibility = np.zeros_like(self.W)
 
                 # Initialize the state
                 state = self.env.init_state()
+                self.eligibility = np.zeros_like(self.W)
                 action, qhat = self.epsilon_greedy_policy(state)
                 next_action = action
 

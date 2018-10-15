@@ -90,16 +90,16 @@ class SarsaAgent:
         end_of_episode_mse = np.zeros(len(td_lambdas))
 
         for li, lam in enumerate(td_lambdas):
+
             self._reset()
 
             for episode in tqdm(range(self.num_episodes)):
 
+                # Initialize the state
+                state = self.env.init_state()
                 self.eligibility = np.zeros((self.env.dealer_value_count,
                                              self.env.player_value_count,
                                              self.env.action_count))
-
-                # Initialize the state
-                state = self.env.init_state()
                 action = self.epsilon_greedy_policy(state)
                 next_action = action
                 seen_states = []
