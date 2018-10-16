@@ -26,6 +26,6 @@ Mean squared error against lambda.
 ![Final MSE per lambda](plot_results/LFA-Sarsa-mse-per_lambda-MC1M.png)
 
 Mean squared error over all states and actions comparing the true Q computed using Monte-Carlo.
-![LFA MSE per lambda](plot_results/MSE_for_all_lambdas_lfa-sarsa-10K-MC1M)
+![LFA MSE per lambda](plot_results/MSE_for_all_lambdas_lfa-sarsa-10K-MC1M.png)
 
 
