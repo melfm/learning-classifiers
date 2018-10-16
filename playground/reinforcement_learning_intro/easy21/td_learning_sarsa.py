@@ -56,8 +56,8 @@ class SarsaAgent:
         Returns:
             action: Chosen action based on Epsilon-greedy.
         """
-        dealer = state.dealer_sum - 1
-        player = state.player_sum - 1
+        dealer = state.dealer_sum
+        player = state.player_sum
         epsilon = self.get_epsilon(sum(self.N[dealer, player, :]))
         if np.random.rand() < (epsilon):
 
@@ -109,12 +109,12 @@ class SarsaAgent:
                     # Execute the action
                     next_state, reward = self.env.step(state, action)
                     # State-action index
-                    idx = state.dealer_sum - 1, state.player_sum - 1, action
+                    idx = state.dealer_sum, state.player_sum, action
 
                     if not next_state.terminal:
                         next_action = self.epsilon_greedy_policy(next_state)
-                        next_idx = next_state.dealer_sum - 1, \
-                            next_state.player_sum - 1, next_action
+                        next_idx = next_state.dealer_sum, \
+                            next_state.player_sum, next_action
 
                         td_error = reward + self.Q[next_idx] - self.Q[idx]
                     else:

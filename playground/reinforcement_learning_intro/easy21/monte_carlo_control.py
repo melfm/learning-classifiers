@@ -43,8 +43,8 @@ class MonteCarloAgent:
         Returns:
             action: Chosen action based on Epsilon-greedy.
         """
-        dealer = state.dealer_sum - 1
-        player = state.player_sum - 1
+        dealer = state.dealer_sum
+        player = state.player_sum
         epsilon = self.get_epsilon(sum(self.N[dealer, player, :]))
         if np.random.rand() < (epsilon):
 
@@ -72,7 +72,7 @@ class MonteCarloAgent:
                 player_trajectories.append((state, action))
 
                 # Book-keeping the visits
-                idx = state.dealer_sum - 1, state.player_sum - 1, action
+                idx = state.dealer_sum, state.player_sum, action
                 self.N[idx] += 1
 
                 # Execute the action
@@ -84,7 +84,7 @@ class MonteCarloAgent:
 
             # Update action-value function Q
             for state, action in player_trajectories:
-                idx = state.dealer_sum - 1, state.player_sum - 1, action
+                idx = state.dealer_sum, state.player_sum, action
                 alpha = 1.0 / self.N[idx]
                 self.Q[idx] += alpha * (reward - self.Q[idx])
 

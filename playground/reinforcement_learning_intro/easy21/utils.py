@@ -108,7 +108,7 @@ def plot_and_save(env, vstar, plot_name):
     fig.savefig(plt_name)
 
 
-def plot_mse_eps_per_lambda(mse_per_lambdas):
+def plot_mse_eps_per_lambda(mse_per_lambdas, episodes, agent_name='td-sarsa'):
 
     # https://stackoverflow.com/questions/45857465/create-a-2d-array-from-another-array-and-its-indices-with-numpy
     m, n = mse_per_lambdas.shape
@@ -122,10 +122,10 @@ def plot_mse_eps_per_lambda(mse_per_lambdas):
     df = pd.DataFrame(out, columns=['lambda', 'Episode', 'MSE'])
     df['lambda'] = df['lambda'] / 10
 
-    g = sns.FacetGrid(df, hue="lambda", size=8, legend_out=True)
-    g = g.map(plt.plot, "Episode", "MSE").add_legend()
+    g = sns.FacetGrid(df, hue='lambda', size=8, legend_out=True)
+    g = g.map(plt.plot, 'Episode', 'MSE').add_legend()
 
     plt.subplots_adjust(top=0.9)
     g.fig.suptitle('Mean Squared Error per Episode')
-
-    g.savefig('MSE_for_all_lambdas')
+    plot_name = 'MSE_for_all_lambdas_' + agent_name + '-' + str(episodes)
+    g.savefig(plot_name)
