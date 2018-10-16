@@ -75,7 +75,7 @@ class LFASarsaAgent:
         if state.terminal:
             return 0
 
-        dealer_sum, player_sum = state.dealer_idx(), state.player_idx()
+        dealer_sum, player_sum = state.dealer_sum, state.player_sum
 
         state_features = np.zeros((self.feature_dim[0], self.feature_dim[1]),
                                   dtype=int)
@@ -113,14 +113,14 @@ class LFASarsaAgent:
                                          player_count,
                                          action_count))
 
-        for dealer in range(1, dealer_count+1):
-            for player in range(1, player_count+1):
+        for dealer in range(0, dealer_count):
+            for player in range(0, player_count):
                 for action in range(0, action_count):
                     state = easyEnv.State(dealer, player)
                     phi = self.make_features(state, action)
                     # Represent action-value function by a linear
                     # combination of features
-                    linear_comb_features[dealer-1, player-1, action] = \
+                    linear_comb_features[dealer, player, action] = \
                         np.dot(phi, self.W)
         return linear_comb_features
 

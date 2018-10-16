@@ -43,7 +43,7 @@ def main(args):
         print('Training TD-Sarsa Agent ...\n')
         print('Loading Monte-Carlo Agent ... hoping it exists!\n')
         # Monte-Carlo iteration, used to save the model name
-        mc_iter = 10000
+        mc_iter = 1000000
         model_name = 'monte-carlo-model_' + str(mc_iter) + '.pickle'
         mc_agent_q = pickle.load(open(model_name, 'rb'))
 
@@ -52,7 +52,8 @@ def main(args):
             sarsa_agent = TDS.SarsaAgent(
                     env, num_episodes=args.num_episodes, n0=args.n0)
             mse_per_lambdas, end_of_episode_mse = sarsa_agent.train(mc_agent_q)
-            util.plot_mse_eps_per_lambda(mse_per_lambdas)
+            util.plot_mse_eps_per_lambda(mse_per_lambdas, args.num_episodes,
+                                         agent_name=agent_mode)
             util.plot_lambda_vs_mse(end_of_episode_mse)
 
         if args.plot_lam_train_err:
@@ -76,14 +77,15 @@ def main(args):
         print('Training Linear-Function-Approximation-Sarsa Agent ...\n')
         print('Loading Monte-Carlo Agent ... hoping it exists!\n')
         # Monte-Carlo iteration, used to save the model name
-        mc_iter = 10000
+        mc_iter = 1000000
         model_name = 'monte-carlo-model_' + str(mc_iter) + '.pickle'
         mc_agent_q = pickle.load(open(model_name, 'rb'))
 
         sarsa_agent = lfasarsa.LFASarsaAgent(
                 env, num_episodes=args.num_episodes)
         mse_per_lambdas, end_of_episode_mse = sarsa_agent.train(mc_agent_q)
-        util.plot_mse_eps_per_lambda(mse_per_lambdas)
+        util.plot_mse_eps_per_lambda(mse_per_lambdas, args.num_episodes,
+                                     agent_name=agent_mode)
         util.plot_lambda_vs_mse(end_of_episode_mse)
         plot_name = 'lfa-sarsa-surface-plot-' + str(args.num_episodes)
         util.plot_and_save(env, sarsa_agent.V, plot_name)

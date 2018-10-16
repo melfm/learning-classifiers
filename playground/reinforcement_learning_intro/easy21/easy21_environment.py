@@ -30,21 +30,15 @@ class State:
         self.player_sum = player_sum
         self.terminal = terminal
 
-    def dealer_idx(self):
-        # We want to exclude the 0 index
-        return self.dealer_sum - 1
-
-    def player_idx(self):
-        return self.player_sum - 1
-
 
 class Easy21Env:
     """Easy21 environment. The game rules are similar to Blackjack.
     """
 
     def __init__(self):
-        self.player_value_count = 21
-        self.dealer_value_count = 10
+        # Assume indices 0-21
+        self.player_value_count = 22
+        self.dealer_value_count = 11
         self.action_count = 2
         self.dealer_sum = None
         self.player_sum = None
