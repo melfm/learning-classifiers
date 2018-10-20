@@ -15,6 +15,8 @@ import inspect
 from multiprocessing import Process
 
 
+import pdb
+
 #============================================================================================#
 # Utilities
 #============================================================================================#
@@ -41,20 +43,17 @@ def build_mlp(input_placeholder, output_size, scope, n_layers, size,
 
         Hint: use tf.layers.dense
     """
-
     with tf.variable_scope(scope):
-        layer_count = 1
-        output_placeholder = None
-        for layer in range(1, n_layers + 1):
-            layer_name = 'h_' + str(layer_count)
-            if layer == 1:
-                dense_layer = tf.layers.dense(input_placeholder, size,
-                                              name=layer_name, activation=activation)
-                output_placeholder = dense_layer
-            else:
-                output_placeholder = tf.layers.dense(output_placeholder, size,
-                                                name=layer_name, activation=activation)
-            layer_count += 1
+        # YOUR_CODE_HERE
+        layer = input_placeholder
+        for i in range(n_layers):
+            layer_name = 'h_' + str(i)
+            layer = tf.layers.dense(layer, size, name=layer_name,
+                                    activation=activation)
+        output_placeholder = tf.layers.dense(layer, output_size,
+                                             name='out_layer',
+                                             activation=output_activation, )
+
 
     return output_placeholder
 
@@ -150,7 +149,6 @@ class Agent(object):
                 Pass in self.n_layers for the 'n_layers' argument, and
                 pass in self.size for the 'size' argument.
         """
-        raise NotImplementedError
         if self.discrete:
             # YOUR_CODE_HERE
             sy_logits_na = build_mlp(sy_ob_no, self.ac_dim, 'policy', n_layers=self.n_layers,
@@ -229,13 +227,12 @@ class Agent(object):
                 For the discrete case, use the log probability under a categorical distribution.
                 For the continuous case, use the log probability under a multivariate gaussian.
         """
-        raise NotImplementedError
         if self.discrete:
             sy_logits_na = policy_parameters
             # YOUR_CODE_HERE
             # Compute the log probability of a set of actions that were actually taken,
             # according to the policy. These need to be negative, because?
-            sy_logprob_n = -tf.nn.sparse_softmax_cross_entropy_with_logits(labels=sy_ac_na,
+            sy_logprob_n = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=sy_ac_na,
                                                                           logits=sy_logits_na)
         else:
             sy_mean, sy_logstd = policy_parameters
@@ -285,8 +282,8 @@ class Agent(object):
         #                           ----------PROBLEM 2----------
         # Loss Function and Training Operation
         #========================================================================================#
-        loss = tf.reduce_mean(self.sy_logprob_n * self.sy_adv_n)
-        self.update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(loss)
+        self.loss = tf.reduce_mean(self.sy_logprob_n * self.sy_adv_n)
+        self.update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
 
         #========================================================================================#
         #                           ----------PROBLEM 6----------
@@ -333,11 +330,10 @@ class Agent(object):
             #====================================================================================#
             #                           ----------PROBLEM 3----------
             #====================================================================================#
-            raise NotImplementedError
-            ac = None # YOUR CODE HERE
+            ac = self.sess.run(self.sy_sampled_ac, feed_dict={self.sy_ob_no: ob[None]})
             ac = ac[0]
             acs.append(ac)
-            ob, rew, done, _ = env.step(ac)
+            ob, rew, done, _ = env.step(ac[0])
             rewards.append(rew)
             steps += 1
             if done or steps > self.max_path_length:
@@ -417,10 +413,19 @@ class Agent(object):
             like the 'ob_no' and 'ac_na' above.
         """
         # YOUR_CODE_HERE
-        if self.reward_to_go:
-            raise NotImplementedError
-        else:
-            raise NotImplementedError
+        # double check this
+        num_paths = len(re_n)
+        q_n = np.zeros((num_paths))
+
+        for time_step, reward in enumerate(re_n):
+            max_step = len(reward)
+            q_sum = 0
+            for t in range(max_step):
+                if self.reward_to_go:
+                    q_sum += [np.sum(np.power(self.gamma, np.arange(max_step - t)) * reward[t:])]
+                else:
+                    q_sum += np.sum(np.power(self.gamma, np.arange(max_step)) * reward[t])
+            q_n[time_step] = q_sum
         return q_n
 
     def compute_advantage(self, ob_no, q_n):
@@ -480,6 +485,8 @@ class Agent(object):
         """
         q_n = self.sum_of_rewards(re_n)
         adv_n = self.compute_advantage(ob_no, q_n)
+
+        pdb.set_trace()
         #====================================================================================#
         #                           ----------PROBLEM 3----------
         # Advantage Normalization
@@ -487,8 +494,9 @@ class Agent(object):
         if self.normalize_advantages:
             # On the next line, implement a trick which is known empirically to reduce variance
             # in policy gradient methods: normalize adv_n to have mean zero and std=1.
-            raise NotImplementedError
-            adv_n = None # YOUR_CODE_HERE
+            # This is done by removing the mean and dividing by std.
+            adv_n = adv_n - np.mean(adv_n, axis=0)
+            adv_n = adv_n / np.std(adv_n, axis=0)
         return q_n, adv_n
 
     def update_parameters(self, ob_no, ac_na, q_n, adv_n):
@@ -538,7 +546,15 @@ class Agent(object):
         # and after an update, and then log them below.
 
         # YOUR_CODE_HERE
-        raise NotImplementedError
+        pdb.set_trace()
+        feed_dict = {self.sy_ob_no: ob_no,
+                     self.sy_ac_na: np.squeeze(ac_na),
+                     self.sy_adv_n: adv_n}
+        #loss_b = self.sess.run(self.loss, feed_dict=feed_dict)
+        loss = self.sess.run(self.update_op, feed_dict=feed_dict)
+
+        #print('Loss before update ', loss_b)
+        print('Loss after update ', loss)
 
 
 def train_PG(
@@ -620,6 +636,7 @@ def train_PG(
     # tensorflow: config, session, variable initialization
     agent.init_tf_sess()
 
+
     #========================================================================================#
     # Training Loop
     #========================================================================================#
@@ -635,6 +652,8 @@ def train_PG(
         ob_no = np.concatenate([path["observation"] for path in paths])
         ac_na = np.concatenate([path["action"] for path in paths])
         re_n = [path["reward"] for path in paths]
+
+        pdb.set_trace()
 
         q_n, adv_n = agent.estimate_return(ob_no, re_n)
         agent.update_parameters(ob_no, ac_na, q_n, adv_n)
@@ -687,6 +706,26 @@ def main():
 
     processes = []
 
+    seed = 0
+    train_PG(
+        exp_name=args.exp_name,
+        env_name=args.env_name,
+        n_iter=args.n_iter,
+        gamma=args.discount,
+        min_timesteps_per_batch=args.batch_size,
+        max_path_length=max_path_length,
+        learning_rate=args.learning_rate,
+        reward_to_go=args.reward_to_go,
+        animate=args.render,
+        logdir=os.path.join(logdir,'%d'%seed),
+        normalize_advantages=not(args.dont_normalize_advantages),
+        nn_baseline=args.nn_baseline,
+        seed=seed,
+        n_layers=args.n_layers,
+        size=args.size
+        )
+
+    """
     for e in range(args.n_experiments):
         seed = args.seed + 10*e
         print('Running experiment with seed %d'%seed)
@@ -720,6 +759,7 @@ def main():
 
     for p in processes:
         p.join()
+    """
 
 if __name__ == "__main__":
     main()
