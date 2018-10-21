@@ -231,7 +231,7 @@ class Agent(object):
             sy_logits_na = policy_parameters
             # YOUR_CODE_HERE
             # Compute the log probability of a set of actions that were actually taken,
-            # according to the policy. These need to be negative, because?
+            # according to the policy.
             sy_logprob_n = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=sy_ac_na,
                                                                           logits=sy_logits_na)
         else:
@@ -413,19 +413,15 @@ class Agent(object):
             like the 'ob_no' and 'ac_na' above.
         """
         # YOUR_CODE_HERE
-        # double check this
-        num_paths = len(re_n)
-        q_n = np.zeros((num_paths))
+        q_n = []
 
         for time_step, reward in enumerate(re_n):
             max_step = len(reward)
-            q_sum = 0
-            for t in range(max_step):
-                if self.reward_to_go:
-                    q_sum += [np.sum(np.power(self.gamma, np.arange(max_step - t)) * reward[t:])]
-                else:
-                    q_sum += np.sum(np.power(self.gamma, np.arange(max_step)) * reward[t])
-            q_n[time_step] = q_sum
+            if self.reward_to_go:
+                q = [np.sum(np.power(self.gamma, np.arange(max_step - t)) * reward[t:]) for t in range(max_step)]
+            else:
+                q = [np.sum(np.power(self.gamma, np.arange(max_step)) * reward) for t in range(max_step)]
+            q_n.extend(q)
         return q_n
 
     def compute_advantage(self, ob_no, q_n):
@@ -486,7 +482,6 @@ class Agent(object):
         q_n = self.sum_of_rewards(re_n)
         adv_n = self.compute_advantage(ob_no, q_n)
 
-        pdb.set_trace()
         #====================================================================================#
         #                           ----------PROBLEM 3----------
         # Advantage Normalization
@@ -546,14 +541,13 @@ class Agent(object):
         # and after an update, and then log them below.
 
         # YOUR_CODE_HERE
-        pdb.set_trace()
         feed_dict = {self.sy_ob_no: ob_no,
                      self.sy_ac_na: np.squeeze(ac_na),
                      self.sy_adv_n: adv_n}
-        #loss_b = self.sess.run(self.loss, feed_dict=feed_dict)
-        loss = self.sess.run(self.update_op, feed_dict=feed_dict)
+        loss_b = self.sess.run(self.loss, feed_dict=feed_dict)
+        _, loss = self.sess.run([self.update_op, self.loss] ,feed_dict=feed_dict)
 
-        #print('Loss before update ', loss_b)
+        print('Loss before update ', loss_b)
         print('Loss after update ', loss)
 
 
@@ -652,8 +646,6 @@ def train_PG(
         ob_no = np.concatenate([path["observation"] for path in paths])
         ac_na = np.concatenate([path["action"] for path in paths])
         re_n = [path["reward"] for path in paths]
-
-        pdb.set_trace()
 
         q_n, adv_n = agent.estimate_return(ob_no, re_n)
         agent.update_parameters(ob_no, ac_na, q_n, adv_n)
