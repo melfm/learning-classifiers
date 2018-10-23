@@ -151,13 +151,15 @@ class Agent(object):
         """
         if self.discrete:
             # YOUR_CODE_HERE
-            sy_logits_na = build_mlp(sy_ob_no, self.ac_dim, 'policy', n_layers=self.n_layers,
+            sy_logits_na = build_mlp(sy_ob_no, self.ac_dim, 'discrete_policy',
+                                     n_layers=self.n_layers,
                                      size=self.size)
             return sy_logits_na
         else:
             # YOUR_CODE_HERE
-            sy_mean = build_mlp(sy_ob_no, self.ac_dim, 'policy', n_layers=self.n_layers,
-                                     size=self.size)
+            sy_mean = build_mlp(sy_ob_no, self.ac_dim, 'continuous_policy',
+                                n_layers=self.n_layers,
+                                size=self.size)
             # This should just be a trainable var, and its log
             sy_logstd = tf.get_variable('std', [self.ac_dim], dtype=tf.float32)
             return (sy_mean, sy_logstd)
@@ -192,13 +194,13 @@ class Agent(object):
         if self.discrete:
             sy_logits_na = policy_parameters
             # YOUR_CODE_HERE
-            sy_sampled_ac = tf.multinomial(sy_logits_na, 1)
+            sy_sampled_ac = tf.reshape(tf.multinomial(sy_logits_na, 1), [-1])
 
         else:
             sy_mean, sy_logstd = policy_parameters
             # YOUR_CODE_HERE
             # Produce samples stochastically from the policy distribution.
-            sy_sampled_ac = tf.random_normal(shap=tf.shape(sy_mean), mean=sy_mean,
+            sy_sampled_ac = tf.random_normal(shape=tf.shape(sy_mean), mean=sy_mean,
                                              stddev=tf.exp(sy_logstd))
             sy_sampled_ac = sy_mean + sy_logstd * sy_sampled_ac
         return sy_sampled_ac
@@ -239,7 +241,7 @@ class Agent(object):
             # YOUR_CODE_HERE
             # Use log probability under a multivariate gaussian distribution.
             # Evaluate the pdf on `sy_ac_na`
-            sy_logprob_n = -tf.contrib.distributions.MultivariateNormalDiag(
+            sy_logprob_n = tf.contrib.distributions.MultivariateNormalDiag(
                 loc=sy_mean, scale_diag=tf.exp(sy_logstd)).log_prob(sy_ac_na)
 
         return sy_logprob_n
@@ -330,10 +332,10 @@ class Agent(object):
             #====================================================================================#
             #                           ----------PROBLEM 3----------
             #====================================================================================#
-            ac = self.sess.run(self.sy_sampled_ac, feed_dict={self.sy_ob_no: ob[None]})
+            ac = self.sess.run(self.sy_sampled_ac, feed_dict={self.sy_ob_no: ob[np.newaxis]})
             ac = ac[0]
             acs.append(ac)
-            ob, rew, done, _ = env.step(ac[0])
+            ob, rew, done, _ = env.step(ac)
             rewards.append(rew)
             steps += 1
             if done or steps > self.max_path_length:
@@ -542,13 +544,12 @@ class Agent(object):
 
         # YOUR_CODE_HERE
         feed_dict = {self.sy_ob_no: ob_no,
-                     self.sy_ac_na: np.squeeze(ac_na),
+                     self.sy_ac_na: ac_na,
                      self.sy_adv_n: adv_n}
         loss_b = self.sess.run(self.loss, feed_dict=feed_dict)
-        _, loss = self.sess.run([self.update_op, self.loss] ,feed_dict=feed_dict)
 
         print('Loss before update ', loss_b)
-        print('Loss after update ', loss)
+        _, loss = self.sess.run([self.update_op, self.loss] ,feed_dict=feed_dict)
 
 
 def train_PG(
@@ -698,60 +699,64 @@ def main():
 
     processes = []
 
-    seed = 0
-    train_PG(
-        exp_name=args.exp_name,
-        env_name=args.env_name,
-        n_iter=args.n_iter,
-        gamma=args.discount,
-        min_timesteps_per_batch=args.batch_size,
-        max_path_length=max_path_length,
-        learning_rate=args.learning_rate,
-        reward_to_go=args.reward_to_go,
-        animate=args.render,
-        logdir=os.path.join(logdir,'%d'%seed),
-        normalize_advantages=not(args.dont_normalize_advantages),
-        nn_baseline=args.nn_baseline,
-        seed=seed,
-        n_layers=args.n_layers,
-        size=args.size
-        )
+    debug = 0
 
-    """
-    for e in range(args.n_experiments):
-        seed = args.seed + 10*e
-        print('Running experiment with seed %d'%seed)
+    if debug:
 
-        def train_func():
-            train_PG(
-                exp_name=args.exp_name,
-                env_name=args.env_name,
-                n_iter=args.n_iter,
-                gamma=args.discount,
-                min_timesteps_per_batch=args.batch_size,
-                max_path_length=max_path_length,
-                learning_rate=args.learning_rate,
-                reward_to_go=args.reward_to_go,
-                animate=args.render,
-                logdir=os.path.join(logdir,'%d'%seed),
-                normalize_advantages=not(args.dont_normalize_advantages),
-                nn_baseline=args.nn_baseline,
-                seed=seed,
-                n_layers=args.n_layers,
-                size=args.size
-                )
-        # # Awkward hacky process runs, because Tensorflow does not like
-        # # repeatedly calling train_PG in the same thread.
-        p = Process(target=train_func, args=tuple())
-        p.start()
-        processes.append(p)
-        # if you comment in the line below, then the loop will block
-        # until this process finishes
-        # p.join()
+        seed = 0
+        train_PG(
+            exp_name=args.exp_name,
+            env_name=args.env_name,
+            n_iter=args.n_iter,
+            gamma=args.discount,
+            min_timesteps_per_batch=args.batch_size,
+            max_path_length=max_path_length,
+            learning_rate=args.learning_rate,
+            reward_to_go=args.reward_to_go,
+            animate=args.render,
+            logdir=os.path.join(logdir,'%d'%seed),
+            normalize_advantages=not(args.dont_normalize_advantages),
+            nn_baseline=args.nn_baseline,
+            seed=seed,
+            n_layers=args.n_layers,
+            size=args.size
+            )
 
-    for p in processes:
-        p.join()
-    """
+    else:
+
+        for e in range(args.n_experiments):
+            seed = args.seed + 10*e
+            print('Running experiment with seed %d'%seed)
+
+            def train_func():
+                train_PG(
+                    exp_name=args.exp_name,
+                    env_name=args.env_name,
+                    n_iter=args.n_iter,
+                    gamma=args.discount,
+                    min_timesteps_per_batch=args.batch_size,
+                    max_path_length=max_path_length,
+                    learning_rate=args.learning_rate,
+                    reward_to_go=args.reward_to_go,
+                    animate=args.render,
+                    logdir=os.path.join(logdir,'%d'%seed),
+                    normalize_advantages=not(args.dont_normalize_advantages),
+                    nn_baseline=args.nn_baseline,
+                    seed=seed,
+                    n_layers=args.n_layers,
+                    size=args.size
+                    )
+            # # Awkward hacky process runs, because Tensorflow does not like
+            # # repeatedly calling train_PG in the same thread.
+            p = Process(target=train_func, args=tuple())
+            p.start()
+            processes.append(p)
+            # if you comment in the line below, then the loop will block
+            # until this process finishes
+            # p.join()
+
+        for p in processes:
+            p.join()
 
 if __name__ == "__main__":
     main()
