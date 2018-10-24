@@ -5,10 +5,10 @@ Adapted for CS294-112 Fall 2018 by Michael Chang and Soroush Nasiriany
 """
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
+#import tensorflow_probability as tfp
 import gym
 import logz
-import scipy.signal
+#import scipy.signal
 import os
 import time
 import inspect
@@ -202,7 +202,6 @@ class Agent(object):
             # Produce samples stochastically from the policy distribution.
             sy_sampled_ac = tf.random_normal(shape=tf.shape(sy_mean), mean=sy_mean,
                                              stddev=tf.exp(sy_logstd))
-            sy_sampled_ac = sy_mean + sy_logstd * sy_sampled_ac
         return sy_sampled_ac
 
     #========================================================================================#
@@ -241,7 +240,8 @@ class Agent(object):
             # YOUR_CODE_HERE
             # Use log probability under a multivariate gaussian distribution.
             # Evaluate the pdf on `sy_ac_na`
-            sy_logprob_n = tf.contrib.distributions.MultivariateNormalDiag(
+            # This needs to be negative for it to work, not sure why though.
+            sy_logprob_n = -tf.contrib.distributions.MultivariateNormalDiag(
                 loc=sy_mean, scale_diag=tf.exp(sy_logstd)).log_prob(sy_ac_na)
 
         return sy_logprob_n
@@ -493,7 +493,9 @@ class Agent(object):
             # in policy gradient methods: normalize adv_n to have mean zero and std=1.
             # This is done by removing the mean and dividing by std.
             adv_n = adv_n - np.mean(adv_n, axis=0)
-            adv_n = adv_n / np.std(adv_n, axis=0)
+            # Add a small constant to avoid zero division
+            adv_n = adv_n / (np.std(adv_n, axis=0) + 1e-7)
+
         return q_n, adv_n
 
     def update_parameters(self, ob_no, ac_na, q_n, adv_n):
