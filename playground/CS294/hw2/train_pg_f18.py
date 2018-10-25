@@ -293,7 +293,6 @@ class Agent(object):
         # neural network baseline. These will be used to fit the neural network baseline.
         #========================================================================================#
         if self.nn_baseline:
-            raise NotImplementedError
             self.baseline_prediction = tf.squeeze(build_mlp(
                                     self.sy_ob_no,
                                     1,
@@ -301,9 +300,11 @@ class Agent(object):
                                     n_layers=self.n_layers,
                                     size=self.size))
             # YOUR_CODE_HERE
-            self.sy_target_n = None
-            baseline_loss = None
-            self.baseline_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(baseline_loss)
+            self.sy_target_n = tf.placeholder(shape=[None], name="baseline",
+                                              dtype=tf.float32)
+            baseline_loss = tf.nn.l2_loss(self.baseline_prediction - self.sy_target_n)
+            self.baseline_update_op = \
+                tf.train.AdamOptimizer(self.learning_rate).minimize(baseline_loss)
 
     def sample_trajectories(self, itr, env):
         # Collect paths until we have enough timesteps
@@ -453,8 +454,11 @@ class Agent(object):
             # Hint #bl1: rescale the output from the nn_baseline to match the statistics
             # (mean and std) of the current batch of Q-values. (Goes with Hint
             # #bl2 in Agent.update_parameters.
-            raise NotImplementedError
-            b_n = None # YOUR CODE HERE
+            b_n = self.sess.run(self.baseline_prediction,
+                                feed_dict={self.sy_ob_no: ob_no})
+            qn_mean = np.mean(q_n, axis=0)
+            qn_std = np.std(q_n, axis=0)
+            b_n = (b_n - qn_mean) / (qn_std + 1e-7)
             adv_n = q_n - b_n
         else:
             adv_n = q_n.copy()
@@ -528,8 +532,16 @@ class Agent(object):
             # Agent.compute_advantage.)
 
             # YOUR_CODE_HERE
-            raise NotImplementedError
-            target_n = None
+            q_n_mean = np.mean(q_n, axis=0)
+            q_n_std = np.std(q_n, axis=0)
+            q_n = (q_n - q_n_mean) / (q_n_std + 1e-7)
+            self.sess.run(self.baseline_update_op,
+                          feed_dict={self.sy_ob_no: ob_no,
+                                     self.sy_target_n: q_n})
+
+            target_n = self.sess.run(self.sy_target_n,
+                                     feed_dict={self.sy_target_n: q_n})
+            print('Targetn ', target_n)
 
         #====================================================================================#
         #                           ----------PROBLEM 3----------
