@@ -688,7 +688,7 @@ def main():
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--discount', type=float, default=1.0)
     parser.add_argument('--n_iter', '-n', type=int, default=100)
-    parser.add_argument('--batch_size', '-b', type=int, default=1000)
+    parser.add_argument('--batch_size', '-b', type=str, default='1000')
     parser.add_argument('--ep_len', '-ep', type=float, default=-1.)
     parser.add_argument('--learning_rate', '-lr', type=float, default=5e-3)
     parser.add_argument('--reward_to_go', '-rtg', action='store_true')
@@ -721,7 +721,7 @@ def main():
             env_name=args.env_name,
             n_iter=args.n_iter,
             gamma=args.discount,
-            min_timesteps_per_batch=args.batch_size,
+            min_timesteps_per_batch=float(int(args.batch_size)),
             max_path_length=max_path_length,
             learning_rate=args.learning_rate,
             reward_to_go=args.reward_to_go,
@@ -738,7 +738,9 @@ def main():
 
         for e in range(args.n_experiments):
             seed = args.seed + 10*e
-            print('Running experiment with seed %d'%seed)
+            #print('Running experiment with seed %d'%seed)
+            #print('batch size')
+            #print(int(args.batch_size))
 
             def train_func():
                 train_PG(
@@ -746,7 +748,7 @@ def main():
                     env_name=args.env_name,
                     n_iter=args.n_iter,
                     gamma=args.discount,
-                    min_timesteps_per_batch=args.batch_size,
+                    min_timesteps_per_batch=float(int(args.batch_size)),
                     max_path_length=max_path_length,
                     learning_rate=args.learning_rate,
                     reward_to_go=args.reward_to_go,
