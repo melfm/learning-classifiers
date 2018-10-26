@@ -7,7 +7,7 @@ do
     for j in "${learning_rates[@]}"
     do
 		echo"Running with batch and learning rate"
-        echo "$i"
+		echo "$i"
 		echo "$j"
 		sh train_policy_job.sh $i $j
     done
